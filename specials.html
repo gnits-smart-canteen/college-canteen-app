@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Daily Specials – GNITS Canteen Admin</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+</head>
+<body>
+
+<nav class="admin-nav">
+  <div class="logo">🍽️ GNITS <span>Admin</span></div>
+  <ul>
+    <li><a href="orders.html">Live Orders</a></li>
+    <li><a href="specials.html" class="active">Daily Specials</a></li>
+    <li><a href="dashboard.html">Dashboard</a></li>
+  </ul>
+  <span style="color:#aaa;font-size:0.85rem;">Owner Panel</span>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <h1>⭐ Manage Daily Specials</h1>
+    <p>Pick items from the menu and set a special price for today</p>
+  </div>
+
+  <div class="specials-manager">
+    <div style="font-weight:600;margin-bottom:0.8rem;">Add a Special</div>
+    <div style="display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;">
+      <select id="item-select" style="flex:2;min-width:180px;">
+        <option value="">-- Select item --</option>
+      </select>
+      <input type="number" id="special-price" placeholder="Special Price (₹)" min="1" style="flex:1;min-width:130px;"/>
+      <button class="btn-add-special" onclick="addSpecialItem()">+ Add Special</button>
+    </div>
+    <div class="error" id="sp-err" style="margin-top:0.5rem;"></div>
+  </div>
+
+  <div style="font-weight:600;margin-bottom:0.8rem;">Today's Specials</div>
+  <div id="specials-list"></div>
+</div>
+
+<div id="toast" class="toast"></div>
+<script src="../data/menu.js"></script>
+<script src="../js/app.js"></script>
+<script>
+  function populateSelect() {
+    const sel = document.getElementById('item-select');
+    const specials = getSpecials();
+    const specialIds = specials.map(s => s.id);
+    sel.innerHTML = '<option value="">-- Select item --</option>';
+    const cats = [...new Set(MENU.map(m => m.category))];
+    cats.forEach(cat => {
+      const items = MENU.filter(m => m.category === cat && !specialIds.includes(m.id));
+      if (items.length === 0) return;
+      sel.innerHTML += `<optgroup label="${cat}">` +
+        items.map(i => `<option value="${i.id}">${i.item} (₹${i.price})</option>`).join('') +
+        `</optgroup>`;
+    });
+  }
+
+  function addSpecialItem() {
+    const id = parseInt(document.getElementById('item-select').value);
+    const price = parseInt(document.getElementById('special-price').value);
+    const err = document.getElementById('sp-err');
+    if (!id) { err.textContent = 'Please select an item.'; return; }
+    if (!price || price <= 0) { err.textContent = 'Please enter a valid price.'; return; }
+    const specials = getSpecials();
+    if (specials.find(s => s.id === id)) { err.textContent = 'Already added.'; return; }
+    specials.push({ id, specialPrice: price });
+    saveSpecials(specials);
+    err.textContent = '';
+    document.getElementById('item-select').value = '';
+    document.getElementById('special-price').value = '';
+    toast('Special added!');
+    populateSelect();
+    renderSpecials();
+  }
+
+  function removeSpecial(id) {
+    const specials = getSpecials().filter(s => s.id !== id);
+    saveSpecials(specials);
+    populateSelect();
+    renderSpecials();
+    toast('Removed from specials.');
+  }
+
+  function renderSpecials() {
+    const specials = getSpecials();
+    const list = document.getElementById('specials-list');
+    if (specials.length === 0) {
+      list.innerHTML = `<div class="empty-state"><div class="icon">⭐</div><p>No specials set for today.</p></div>`;
+      return;
+    }
+    list.innerHTML = `<table class="orders-table">
+      <thead><tr><th>Item</th><th>Category</th><th>Original Price</th><th>Special Price</th><th>Wait</th><th>Action</th></tr></thead>
+      <tbody>` +
+      specials.map(s => {
+        const item = MENU.find(m => m.id === s.id);
+        return `<tr>
+          <td style="font-weight:600;">${item.item}</td>
+          <td>${item.category}</td>
+          <td>₹${item.price}</td>
+          <td style="color:var(--primary);font-weight:700;">₹${s.specialPrice}</td>
+          <td>~${item.wait} mins</td>
+          <td><button class="btn-remove" onclick="removeSpecial(${s.id})">Remove</button></td>
+        </tr>`;
+      }).join('') +
+      `</tbody></table>`;
+  }
+
+  populateSelect();
+  renderSpecials();
+</script>
+</body>
+</html>
