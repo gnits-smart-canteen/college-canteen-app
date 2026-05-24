@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GNITS Smart Canteen</title>
+
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+
+<body>
+
+<div class="auth-wrap">
+
+  <div class="auth-card">
+
+    <div class="brand">🍽️</div>
+
+    <div style="
+      font-size:1.3rem;
+      font-weight:700;
+      color:#D28A7C;
+      margin-bottom:0.2rem;
+    ">
+      GNITS Smart Canteen
+    </div>
+
+    <p style="
+      color:#888;
+      font-size:0.85rem;
+      margin-bottom:1.5rem;
+    ">
+      Skip the queue. Order smart.
+    </p>
+
+    <!-- LOGIN -->
+    <div id="login-form">
+
+      <h2>Student Login</h2>
+
+      <div class="error" id="login-err"></div>
+
+      <input
+        type="text"
+        id="login-roll"
+        placeholder="Username / Roll Number"
+        maxlength="30"
+      />
+
+      <input
+        type="password"
+        id="login-pass"
+        placeholder="Password"
+      />
+
+      <button
+        type="button"
+        class="btn-primary"
+        id="loginBtn"
+      >
+        Login
+      </button>
+
+      <div class="switch-link">
+        New here?
+        <a onclick="showSignup()">Create Account</a>
+      </div>
+
+    </div>
+
+    <!-- SIGNUP -->
+    <div id="signup-form" style="display:none;">
+
+      <h2>Create Account</h2>
+
+      <div class="error" id="signup-err"></div>
+
+      <input
+        type="text"
+        id="signup-roll"
+        placeholder="Roll Number / Username"
+        maxlength="30"
+      />
+
+      <input
+        type="text"
+        id="signup-name"
+        placeholder="Your Name"
+      />
+
+      <input
+        type="password"
+        id="signup-pass"
+        placeholder="Set Password"
+      />
+
+      <input
+        type="password"
+        id="signup-pass2"
+        placeholder="Confirm Password"
+      />
+
+      <button
+        type="button"
+        class="btn-primary"
+        id="signupBtn"
+      >
+        Create Account
+      </button>
+
+      <div class="switch-link">
+        Already have an account?
+        <a onclick="showLogin()">Login</a>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+
+  function showSignup() {
+    document.getElementById('login-form').style.display = 'none';
+    document.getElementById('signup-form').style.display = 'block';
+  }
+
+  function showLogin() {
+    document.getElementById('signup-form').style.display = 'none';
+    document.getElementById('login-form').style.display = 'block';
+  }
+
+  document.addEventListener('keydown', e => {
+
+    if (e.key === 'Enter') {
+
+      if (
+        document.getElementById('signup-form').style.display !== 'none'
+      ) {
+        document.getElementById('signupBtn').click();
+      }
+
+      else {
+        document.getElementById('loginBtn').click();
+      }
+
+    }
+
+  });
+
+</script>
+
+<script type="module" src="js/auth.js"></script>
+
+</body>
+</html>
