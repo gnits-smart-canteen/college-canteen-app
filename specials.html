@@ -42,41 +42,161 @@
 </nav>
 
 <div id="toast" class="toast"></div>
-<script src="data/menu.js"></script>
-<script type="module" src="js/app.js"></script>
-<script>
-  if (!requireAuth()) {}
+<script src="js/menu.js"></script>
 
-  document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+<script type="module">
 
-  function render() {
-    const specials = getSpecials();
-    const wrap = document.getElementById('specials-wrap');
-    if (specials.length === 0) {
-      wrap.innerHTML = `<div class="empty-state"><div class="icon">🍽️</div><p>No specials today. Check back later!</p></div>`;
-      return;
-    }
-    wrap.innerHTML = `<div class="specials-grid">` + specials.map(s => {
-      const orig = MENU.find(m => m.id === s.id);
-      return `<div class="special-card">
-        <div class="s-name">${orig.item}</div>
-        <div class="s-orig">Original: ₹${orig.price}</div>
-        <div class="s-price">₹${s.specialPrice}</div>
-        <div class="s-wait">⏱ ~${orig.wait} mins &nbsp;|&nbsp; ${orig.category}</div>
-        <button class="add-btn" onclick="addSpecial(${orig.id})">Add to Cart</button>
-      </div>`;
-    }).join('') + `</div>`;
-  }
+import "./js/app.js";
 
-  function addSpecial(id) {
-    const item = MENU.find(m => m.id === id);
-    const special = getSpecials().find(s => s.id === id);
-    addToCart({ ...item, price: special.specialPrice });
-    updateCartBadge();
-  }
+window.requireAuth(() => {
+
+  document.getElementById(
+    "today-date"
+  ).textContent =
+
+    new Date().toLocaleDateString(
+      'en-IN',
+      {
+        weekday:'long',
+        year:'numeric',
+        month:'long',
+        day:'numeric'
+      }
+    );
 
   render();
-  updateCartBadge();
+
+});
+
+async function render() {
+
+  const specials =
+    await window.getSpecials();
+
+  const wrap =
+    document.getElementById(
+      'specials-wrap'
+    );
+
+  if (!specials.length) {
+
+    wrap.innerHTML = `
+
+      <div class="empty-state">
+
+        <div class="icon">
+          🍽️
+        </div>
+
+        <p>
+          No specials today.
+          Check back later!
+        </p>
+
+      </div>
+
+    `;
+
+    return;
+
+  }
+
+  wrap.innerHTML = `
+
+    <div class="specials-grid">
+
+      ${specials.map(s => {
+
+        const orig =
+          window.getAllMenuItems()
+          .find(m => m.id === s.id);
+
+        if (!orig)
+          return '';
+
+        return `
+
+        <div class="special-card">
+
+          <div class="s-name">
+            ${orig.item}
+          </div>
+
+          <div class="s-orig">
+            Original: ₹${orig.price}
+          </div>
+
+          <div class="s-price">
+            ₹${s.specialPrice}
+          </div>
+
+          <div class="s-wait">
+
+            ⏱ ~${orig.wait} mins
+
+            |
+
+            ${orig.category}
+
+          </div>
+
+          <button
+            class="add-btn"
+            onclick="addSpecial(${orig.id})"
+          >
+
+            Add to Cart
+
+          </button>
+
+        </div>
+
+        `;
+
+      }).join('')}
+
+    </div>
+
+  `;
+
+}
+
+window.addSpecial =
+async function(id) {
+
+  const specials =
+    await window.getSpecials();
+
+  const special =
+    specials.find(
+      s => s.id === id
+    );
+
+  const item =
+    window
+      .getAllMenuItems()
+      .find(
+        m => m.id === id
+      );
+
+  if (!item || !special)
+    return;
+
+  window.addToCart({
+
+    ...item,
+
+    price:
+      special.specialPrice
+
+  });
+
+  window.updateCartBadge();
+
+};
+
+window.updateCartBadge();
+
 </script>
 </body>
 </html>
