@@ -59,15 +59,51 @@
 
 <div id="toast" class="toast"></div>
 
-<script src="data/menu.js"></script>
-<script src="data/users.js"></script>
-<script src="js/app.js"></script>
-<script>
-  if (!requireAuth()) {}
+<script type="module">
 
-  const roll = getCurrentUser();
-  const users = getUsers();
-  document.getElementById('user-name').textContent = users[roll]?.name || roll;
+import { auth } from "./js/firebase-config.js";
+
+import {
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+window.logout = async function () {
+
+  await signOut(auth);
+
+  window.location.href = "index.html";
+};
+
+onAuthStateChanged(auth, (user) => {
+
+  if (!user) {
+
+    window.location.href = "index.html";
+  }
+
+  else {
+
+    document.getElementById("user-name").textContent =
+      user.email.split("@")[0];
+  }
+
+});
+
+</script>
+
+<script src="js/menu.js"></script>
+<script type="module">
+import "./js/app.js";
+window.filterCat = filterCat;
+window.addItem = addItem;
+window.changeQty = changeQty;
+window.openCart = openCart;
+window.closeCart = closeCart;
+window.goCheckout = goCheckout;
+
+  document.getElementById('user-name').textContent =
+  "Student";
 
   // ── Badge & dynamic label logic ───────────────────────────────────────────
   // Best sellers: top 10 by order count from history
@@ -142,57 +178,202 @@
 
   function filterCat(cat) { activeCategory = cat; renderTabs(); renderMenu(); }
 
-  function renderMenu() {
-    const specials    = getSpecials();
-    const specialIds  = specials.map(s => s.id);
-    const bestSellers = getBestSellerIds();
-    const topRated    = getTopRatedIds();
-    const trending    = getTrendingIds();
-    const orderCounts = getOrderCounts();
-    const busy        = isBusy();
-    const items       = activeCategory === 'All' ? MENU : MENU.filter(m => m.category === activeCategory);
-    const cart        = getCart();
+  function getCategoryItems(categoryObj) {
 
-    document.getElementById('menu-grid').innerHTML = items.map(item => {
-      const inCart       = cart.find(c => c.id === item.id);
-      const isSpecial    = specialIds.includes(item.id);
-      const special      = specials.find(s => s.id === item.id);
-      const displayPrice = isSpecial ? special.specialPrice : item.price;
+  // Categories WITH groups
+  if (categoryObj.groups) {
 
-      return `<div class="menu-card">
-        ${isSpecial ? `<div class="special-badge">⭐ Today's Pick</div>` : ''}
-        ${getBadgesHTML(item, bestSellers, topRated)}
-        <div class="item-name">${item.item}</div>
-        <div class="item-cat">${item.category}</div>
-        <div class="item-price">₹${displayPrice}
-          ${isSpecial ? `<span style="text-decoration:line-through;color:#aaa;font-size:0.8rem;">₹${item.price}</span>` : ''}
-        </div>
-        <div class="item-wait">⏱ ~${item.wait} mins</div>
-        ${getDynamicLabel(item, orderCounts, trending, busy)}
-        ${inCart
-          ? `<div class="qty-ctrl">
-               <button onclick="changeQty(${item.id},-1)">−</button>
-               <span>${inCart.qty}</span>
-               <button onclick="changeQty(${item.id},1)">+</button>
-             </div>`
-          : `<button class="add-btn" onclick="addItem(${item.id})">+ Add</button>`
+    return categoryObj.groups.flatMap(group =>
+      group.items.map(item => ({
+        ...item,
+        category: categoryObj.category,
+        group: group.name
+      }))
+    );
+
+  }
+
+  // Categories WITHOUT groups
+  return categoryObj.items.map(item => ({
+    ...item,
+    category: categoryObj.category
+  }));
+
+}
+
+async function renderMenu() {
+
+  const specials    = await getSpecials();
+  const specialIds = Array.isArray(specials)
+  ? specials.map(s => s.id)
+  : [];
+  const bestSellers = getBestSellerIds();
+  const topRated    = getTopRatedIds();
+  const trending    = getTrendingIds();
+  const orderCounts = getOrderCounts();
+  const busy        = isBusy();
+  const cart        = getCart();
+
+  const allItems = getAllMenuItems();
+
+  const items =
+    activeCategory === 'All'
+      ? allItems
+      : allItems.filter(
+          item => item.category === activeCategory
+        );
+
+  // GROUP ITEMS
+  const grouped = {};
+
+  items.forEach(item => {
+
+    const key = item.group || "Other";
+
+    if (!grouped[key]) {
+      grouped[key] = [];
+    }
+
+    grouped[key].push(item);
+
+  });
+
+  document.getElementById('menu-grid').innerHTML =
+
+    Object.entries(grouped).map(([groupName, groupItems]) => {
+
+      return `
+
+      <div class="menu-group">
+
+        ${groupName !== "Other"
+          ? `<h2 class="group-heading">
+               ${groupName}
+             </h2>`
+          : ''
         }
-      </div>`;
+
+        <div class="group-items">
+
+          ${groupItems.map(item => {
+
+            const inCart =
+              cart.find(c => c.id === item.id);
+
+            const isSpecial =
+              specialIds.includes(item.id);
+
+            const special =
+              specials.find(s => s.id === item.id);
+
+            const displayPrice =
+              isSpecial
+                ? special.specialPrice
+                : item.price;
+
+            return `
+
+            <div class="menu-card">
+
+              ${isSpecial
+                ? `<div class="special-badge">
+                     ⭐ Today's Pick
+                   </div>`
+                : ''
+              }
+
+              ${getBadgesHTML(
+                item,
+                bestSellers,
+                topRated
+              )}
+
+              <div class="item-name">
+                ${item.item}
+              </div>
+
+              <div class="item-price">
+                ₹${displayPrice}
+              </div>
+
+              <div class="item-wait">
+                ⏱ ~${item.wait} mins
+              </div>
+
+              ${getDynamicLabel(
+                item,
+                orderCounts,
+                trending,
+                busy
+              )}
+
+              ${inCart
+
+                ? `<div class="qty-ctrl">
+
+                     <button onclick="changeQty(${item.id},-1)">
+                       −
+                     </button>
+
+                     <span>${inCart.qty}</span>
+
+                     <button onclick="changeQty(${item.id},1)">
+                       +
+                     </button>
+
+                   </div>`
+
+                : `<button
+                     class="add-btn"
+                     onclick="addItem(${item.id})"
+                   >
+                     + Add
+                   </button>`
+              }
+
+            </div>
+
+            `;
+
+          }).join('')}
+
+        </div>
+
+      </div>
+
+      `;
+
     }).join('');
-  }
 
-  function addItem(id) {
-    const item    = MENU.find(m => m.id === id);
-    const special = getSpecials().find(s => s.id === id);
-    addToCart(special ? { ...item, price: special.specialPrice } : item);
-    renderMenu();
-  }
+}
 
-  function changeQty(id, delta) {
-    updateCartQty(id, delta);
-    renderMenu();
-    renderCartSidebar();
-  }
+async function addItem(id) {
+
+  const item =
+    getAllMenuItems().find(m => m.id === id);
+
+  const specials = await getSpecials();
+
+  const special =
+  specials.find(s => s.id === id);
+
+  addToCart(
+    special
+      ? { ...item, price: special.specialPrice }
+      : item
+  );
+
+  renderMenu();
+
+}
+
+async function changeQty(id, delta) {
+  updateCartQty(id, delta);
+
+  await renderMenu();
+
+  renderCartSidebar();
+}
 
   function renderCartSidebar() {
     const cart = getCart();
@@ -219,9 +400,16 @@
   function closeCart() { document.getElementById('cart-overlay').classList.remove('open'); document.getElementById('cart-sidebar').classList.remove('open'); }
   function goCheckout() { if (getCart().length === 0) { toast('Tray is empty!'); return; } window.location.href = 'payment.html'; }
 
+  (async () => {
+
   renderTabs();
-  renderMenu();
+
+  await renderMenu();
+
   updateCartBadge();
+
+})();
+  
 </script>
 </body>
 </html>
