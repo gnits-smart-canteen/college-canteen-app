@@ -1,5 +1,12 @@
 import { auth } from "./firebase-config.js";
 import { signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+ doc,
+ getDoc,
+ updateDoc
+}
+from
+"https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ── Utility ──────────────────────────────────────────────────────────────────
 function toast(msg) {
@@ -20,7 +27,6 @@ function fmtDate(ts) {
 // ── Auth ──────────────────────────────────────────────────────────────────────
 function getUsers() { return JSON.parse(localStorage.getItem('sc_users') || '{}'); }
 function saveUsers(u) { localStorage.setItem('sc_users', JSON.stringify(u)); }
-function getCurrentUser() { return localStorage.getItem('sc_current_user'); }
 function setCurrentUser(roll) { localStorage.setItem('sc_current_user', roll); }
 async function logout() {
 
@@ -32,26 +38,27 @@ async function logout() {
 
   window.location.href = base;
 }
+function getCurrentUser() {
+  return auth.currentUser
+    ? auth.currentUser.email.split('@')[0]
+    : null;
+}
 
-function requireAuth(callback = null) {
+function requireAuth(callback) {
 
   onAuthStateChanged(auth, (user) => {
 
     if (!user) {
 
-      const base =
-        window.location.pathname.includes('/admin/')
+      const base = window.location.pathname.includes('/admin/')
         ? '../index.html'
         : 'index.html';
 
       window.location.href = base;
-
       return;
     }
 
-    if (callback) {
-      callback(user);
-    }
+    if (callback) callback(user);
 
   });
 
@@ -166,6 +173,8 @@ function addReview(roll, dishId, dishName, rating, comment) {
   reviews.unshift({ roll, dishId, dishName, rating, comment, ts: Date.now() });
   saveReviews(reviews);
 }
+window.addReview = addReview;
+window.getReviews = getReviews;
 
 // ── Daily Specials ────────────────────────────────────────────────────────────
 function getSpecials() { return JSON.parse(localStorage.getItem('sc_specials') || '[]'); }
@@ -187,5 +196,9 @@ window.logout = logout;
 window.fmtDate = fmtDate;
 window.placeOrder = placeOrder;
 window.auth = auth;
+window.getCurrentUser=getCurrentUser;
 window.getUsers = getUsers;
 window.saveOrders = saveOrders;
+window.doc = doc;
+window.getDoc = getDoc;
+window.updateDoc = updateDoc;
