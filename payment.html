@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Payment – GNITS Canteen</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+  <div class="pay-page">
+
+  <!-- LEFT SIDE -->
+  <div class="pay-left">
+
+    <div class="rp-brand">
+      <div class="rp-logo">₹</div>
+      <div>
+        <div class="rp-title">GNITS Canteen</div>
+        <div class="rp-sub">Secure payment gateway</div>
+      </div>
+    </div>
+
+    <div class="amount-box">
+      <div class="amount-label">Amount to pay</div>
+      <div class="amount">₹<span id="pay-total">0</span></div>
+    </div>
+
+    <div class="order-summary">
+      <div class="summary-head">
+        <span>Order Summary</span>
+        <span id="item-count">0 items</span>
+      </div>
+      <div id="summary-items"></div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT SIDE -->
+  <div class="pay-right">
+
+    <div class="payment-card">
+
+      <div class="payment-head">
+        <h2>Choose payment method</h2>
+        <p>All transactions are encrypted and secure.</p>
+      </div>
+      <div class="payment-method active">
+        <div class="pm-left">
+          <div class="pm-icon">📱</div>
+          <div>
+            <div class="pm-title">UPI Payment</div>
+            <div class="pm-sub">Google Pay, PhonePe, Paytm</div>
+          </div>
+        </div>
+        <input type="radio" checked>
+      </div>
+
+      <div class="upi-box">
+        <input type="text" placeholder="Enter UPI ID" id="upi-id">
+      </div>
+
+      <div class="divider">OR</div>
+
+      <button class="quick-pay">
+        <span></span>
+        Pay using Cash
+      </button>
+      <div class="secure-note">
+        🔒 100% Secure Payments
+      </div>
+
+      <button class="pay-btn" onclick="completePayment()">
+        Pay ₹<span id="btn-total">0</span>
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+<script src="js/menu.js"></script>
+<script type="module" src="js/app.js"></script>
+<script>
+
+window.addEventListener('DOMContentLoaded', () => {
+
+  requireAuth((user) => {
+
+    const cart = getCart();
+
+    console.log(cart);
+
+    if (cart.length === 0) {
+      window.location.href = 'menu.html';
+      return;
+    }
+
+    // TOTAL
+    const total = cart.reduce((sum, item) => {
+      return sum + (item.price * item.qty);
+    }, 0);
+
+    // ITEM COUNT
+    const itemCount = cart.reduce((sum, item) => {
+      return sum + item.qty;
+    }, 0);
+
+    // UPDATE UI
+    document.getElementById('pay-total').textContent = total;
+
+    document.getElementById('btn-total').textContent = total;
+
+    document.getElementById('item-count').textContent =
+      itemCount + ' items';
+
+    // RENDER SUMMARY
+    document.getElementById('summary-items').innerHTML =
+      cart.map(item => `
+
+        <div class="summary-item">
+
+          <div>
+            <div class="si-name">${item.item}</div>
+            <div class="si-qty">
+              Qty ${item.qty}
+            </div>
+          </div>
+
+          <div class="si-price">
+            ₹${item.price * item.qty}
+          </div>
+
+        </div>
+
+      `).join('');
+
+    // PAYMENT BUTTON
+    window.completePayment = async function () {
+
+  try {
+
+    const roll = getCurrentUser();
+
+    const cart = getCart();
+
+    const total = cartTotal();
+
+    if (!cart.length) {
+      alert("Cart empty");
+      return;
+    }
+
+    // create order locally
+    const order =
+      placeOrder(
+        cart,
+        total,
+        roll
+      );
+
+    console.log("ORDER", order);
+
+    // firebase save
+    const ref =
+      window.doc(
+        window.db,
+        "erp_users",
+        roll.toUpperCase()
+      );
+
+    const snap =
+      await window.getDoc(ref);
+
+    const data =
+      snap.data();
+
+    const orders =
+      data.orders || [];
+
+    orders.unshift(order);
+
+    await window.updateDoc(
+      ref,
+      {
+        orders
+      }
+    );
+
+    console.log("Saved to Firebase");
+
+    localStorage.setItem(
+      "sc_last_order",
+      order.id
+    );
+
+    window.location.href =
+      "receipt.html";
+
+  }
+
+  catch (e) {
+
+    console.error(
+      "PAY ERROR:",
+      e
+    );
+
+    alert(
+      e.message
+    );
+
+  }
+
+};
+  });
+
+});
+
+</script>
+</body>
+</html>

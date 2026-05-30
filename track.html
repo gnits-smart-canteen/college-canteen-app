@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Track Order – GNITS Canteen</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<nav>
+  <div class="logo">🍽️ GNITS <span>Canteen</span></div>
+  <ul>
+    <li><a href="menu.html">Explore</a></li>
+    <li><a href="specials.html">Today's Picks</a></li>
+    <li><a href="track.html" class="active">Track Order</a></li>
+    <li><a href="history.html">Your Orders</a></li>
+    <li><a href="reviews.html">Reviews</a></li>
+  </ul>
+  <button class="cart-btn" style="background:#fff3;color:#fff;" onclick="logout()">Logout</button>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <h1>📍 Track Your Orders</h1>
+    <p>Live status of your active orders</p>
+  </div>
+  <div id="track-wrap"></div>
+</div>
+
+<!-- Bottom Nav -->
+<nav class="bottom-nav">
+  <a href="menu.html"><span class="bn-icon">🍽️</span>Explore</a>
+  <a href="specials.html"><span class="bn-icon"></span>Today's Picks</a>
+  <a href="track.html" class="active"><span class="bn-icon"></span>Track</a>
+  <a href="history.html"><span class="bn-icon"></span>Your Orders</a>
+  <a href="reviews.html"><span class="bn-icon"></span>Reviews</a>
+</nav>
+
+<div id="toast" class="toast"></div>
+<script src="js/menu.js"></script>
+<script type="module">
+import "./js/app.js";
+
+window.addEventListener("DOMContentLoaded", () => {
+
+  window.requireAuth((user) => {
+
+    const roll =
+      user.email.replace(
+        "@gnitscanteen.com",
+        ""
+      );
+
+    const STATUSES = [
+      "Placed",
+      "Preparing",
+      "Ready"
+    ];
+
+    function statusIndex(s) {
+      return STATUSES.indexOf(s);
+    }
+
+    function render() {
+      // AUTO UPDATE STATUS BASED ON TIME
+      const orders = window.getOrders();
+      orders.forEach(order => {
+
+const minsPassed =
+    (Date.now() - order.placedAt) / 60000;
+
+  // HALF TIME = PREPARING
+  if (
+    minsPassed >= order.waitMins / 2 &&
+    order.status === "Placed"
+  ) {
+    order.status = "Preparing";
+  }
+
+  // FULL TIME = READY
+  if (
+    minsPassed >= order.waitMins &&
+    order.status !== "Ready"
+  ) {
+    order.status = "Ready";
+  }
+
+});
+
+window.saveOrders(orders);
+      const active = orders.filter(order => {
+
+  // only this user's orders
+  if (order.roll !== roll) return false;
+
+  // show placed/preparing always
+  if (order.status !== "Ready") return true;
+
+  // show ready only for 10 mins
+  return (
+    Date.now() - order.placedAt
+    < (order.waitMins + 10) * 60000
+  );
+
+});
+
+      const wrap =
+        document.getElementById("track-wrap");
+
+      if (active.length === 0) {
+
+        wrap.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">🍽️</div>
+            <p>No active orders right now.</p>
+          </div>
+        `;
+
+        return;
+      }
+
+      wrap.innerHTML = active.map(order => {
+
+        const si =
+          statusIndex(order.status);
+
+        return `
+
+          <div class="order-track-card">
+
+            <div class="ot-header">
+
+              <div>
+                <div style="font-weight:600;">
+                  ${order.items.map(i => i.item).join(", ")}
+                </div>
+
+                <div class="ot-id">
+                  Receipt: ${order.id}
+                </div>
+              </div>
+
+              <span class="wait-badge">
+                ⏱ ~${order.waitMins} mins
+              </span>
+
+            </div>
+
+            <div class="status-bar">
+
+              ${STATUSES.map((s, i) => `
+
+                <div class="status-step ${i < si ? 'done' : i === si ? 'active' : ''}">
+
+                  <div class="dot">
+                    ${i < si ? '✓' : i + 1}
+                  </div>
+
+                  <div class="label">
+                    ${s}
+                  </div>
+
+                </div>
+
+                ${i < STATUSES.length - 1
+                  ? `<div class="status-line ${i < si ? 'done' : ''}"></div>`
+                  : ''
+                }
+
+              `).join("")}
+
+            </div>
+
+            <div style="
+              margin-top:1rem;
+              display:flex;
+              justify-content:space-between;
+            ">
+              <span>
+                ₹${order.total}
+              </span>
+
+              <span style="color:var(--muted);">
+                ${window.fmtDate(order.placedAt)}
+              </span>
+            </div>
+
+          </div>
+
+        `;
+
+      }).join("");
+
+    }
+
+    render();
+
+    setInterval(render, 15000);
+
+  });
+
+});
+
+</script>
+</body>
+</html>
