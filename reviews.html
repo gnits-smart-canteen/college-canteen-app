@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Reviews – GNITS Canteen</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<nav>
+  <div class="logo">🍽️ GNITS <span>Canteen</span></div>
+  <ul>
+    <li><a href="menu.html">Explore</a></li>
+    <li><a href="specials.html">Today's Picks</a></li>
+    <li><a href="track.html">Track Order</a></li>
+    <li><a href="history.html">Your Orders</a></li>
+    <li><a href="reviews.html" class="active">Reviews</a></li>
+  </ul>
+  <button class="cart-btn" style="background:#fff3;color:#fff;" onclick="logout()">Logout</button>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <h1>Reviews</h1>
+    <p>Only dishes you've ordered can be reviewed</p>
+  </div>
+
+  <div class="review-form" id="review-form-wrap">
+    <div style="font-weight:600;margin-bottom:0.8rem;">Write a Review</div>
+    <select id="dish-select"></select>
+    <div class="stars" id="star-row">
+      <span class="star" onclick="setStar(1)">★</span>
+      <span class="star" onclick="setStar(2)">★</span>
+      <span class="star" onclick="setStar(3)">★</span>
+      <span class="star" onclick="setStar(4)">★</span>
+      <span class="star" onclick="setStar(5)">★</span>
+    </div>
+    <textarea id="review-comment" rows="3" placeholder="Share your experience..."></textarea>
+    <button
+  class="review-submit"
+  onclick="submitReview()"
+>
+  Submit Review
+</button>
+    <div class="error" id="review-err" style="margin-top:0.5rem;"></div>
+  </div>
+
+  <div style="font-weight:600;margin-bottom:0.8rem;">All Reviews</div>
+  <div id="reviews-list"></div>
+</div>
+
+<div id="toast" class="toast"></div>
+<script src="js/menu.js"></script>
+<script type="module">
+
+import "./js/app.js";
+
+import { auth } from "./js/firebase-config.js";
+
+import {
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+let roll = "";
+
+onAuthStateChanged(auth, async (user) => {
+
+  if (!user) {
+
+    window.location.href =
+      "index.html";
+
+    return;
+
+  }
+
+  roll =
+    user.email
+      .replace(
+        "@gnitscanteen.com",
+        ""
+      )
+      .toUpperCase();
+
+  await populateDishSelect();
+
+  renderReviews();
+
+});
+
+let selectedRating = 0;
+
+window.setStar = function(n) {
+
+  selectedRating = n;
+
+  document
+    .querySelectorAll('#star-row .star')
+    .forEach((s, i) => {
+
+      s.classList.toggle(
+        'active',
+        i < n
+      );
+
+    });
+
+};
+
+/* =========================
+   DISHES USER ORDERED
+========================= */
+
+async function getOrderedDishes() {
+
+  const ref =
+    window.doc(
+      window.db,
+      "erp_users",
+      roll.toUpperCase()
+    );
+
+  const snap =
+    await window.getDoc(ref);
+
+  const data =
+    snap.data();
+
+  const orders =
+    data?.orders || [];
+
+  window.currentOrders =
+    orders;
+
+  const dishes = {};
+
+  orders.forEach(order => {
+
+    order.items.forEach(item => {
+
+      dishes[item.id] =
+        item.item;
+
+    });
+
+  });
+
+  return dishes;
+
+}
+
+/* =========================
+   POPULATE DROPDOWN
+========================= */
+async function populateDishSelect() {
+
+  const dishes =
+    await getOrderedDishes();
+
+  const select =
+    document.getElementById(
+      "dish-select"
+    );
+
+  select.innerHTML = `
+<option value="">
+Select a dish
+</option>
+`;
+
+  Object.entries(dishes)
+  .forEach(([id,name])=>{
+
+    select.innerHTML += `
+
+<option value="${id}">
+${name}
+</option>
+
+`;
+
+  });
+
+  if (
+    Object.keys(dishes)
+      .length === 0
+  ) {
+
+    document.getElementById(
+      "review-form-wrap"
+    ).innerHTML = `
+
+<div class="empty-state">
+
+<div class="icon">
+🍽️
+</div>
+
+<p>
+Order something first
+to leave a review!
+</p>
+
+</div>
+
+`;
+
+  }
+
+}
+/* =========================
+   STAR RATING
+========================= */
+
+window.setStar = function(rating) {
+
+  selectedRating = rating;
+
+  const stars =
+    document.querySelectorAll(".star");
+
+  stars.forEach((star, index) => {
+
+    if (index < rating) {
+      star.classList.add("active");
+    }
+
+    else {
+      star.classList.remove("active");
+    }
+
+  });
+
+};
+
+/* =========================
+   SUBMIT REVIEW
+========================= */
+window.submitReview = async function () {
+
+  const dishId =
+    parseInt(
+      document
+      .getElementById(
+        "dish-select"
+      ).value
+    );
+
+  const comment =
+    document
+    .getElementById(
+      "review-comment"
+    )
+    .value
+    .trim();
+
+  const err =
+    document
+    .getElementById(
+      "review-err"
+    );
+
+  err.textContent = "";
+
+  if (!dishId) {
+    err.textContent =
+      "Please select a dish.";
+    return;
+  }
+
+  if (!selectedRating) {
+    err.textContent =
+      "Select a rating.";
+    return;
+  }
+
+  if (!comment) {
+    err.textContent =
+      "Write a review.";
+    return;
+  }
+
+  let dishName = "";
+
+  window.MENU.forEach(cat => {
+
+    (cat.items || [])
+    .forEach(item => {
+
+      if (
+        item.id === dishId
+      ) {
+        dishName =
+          item.item;
+      }
+
+    });
+
+    (cat.groups || [])
+    .forEach(group => {
+
+      group.items
+      .forEach(item => {
+
+        if (
+          item.id === dishId
+        ) {
+          dishName =
+            item.item;
+        }
+
+      });
+
+    });
+
+  });
+
+  const review = {
+
+    roll,
+    dishId,
+    dishName,
+    rating:
+      selectedRating,
+    comment,
+    ts:
+      Date.now()
+
+  };
+
+  const ref =
+    window.doc(
+      window.db,
+      "erp_users",
+      roll
+    );
+
+  const snap =
+    await window.getDoc(
+      ref
+    );
+
+  const data =
+    snap.data();
+
+  const reviews =
+    data.reviews || [];
+
+  reviews.unshift(
+    review
+  );
+
+  await window.updateDoc(
+    ref,
+    {
+      reviews
+    }
+  );
+
+  document
+  .getElementById(
+    "review-comment"
+  ).value = "";
+
+  selectedRating = 0;
+
+  setStar(0);
+
+  toast(
+    "Review submitted!"
+  );
+
+  renderReviews();
+
+};
+/* =========================
+   RENDER REVIEWS
+========================= */
+
+async function renderReviews() {
+
+  const ref =
+  window.doc(
+  window.db,
+  "erp_users",
+  roll
+  );
+
+const snap =
+await window.getDoc(
+ref
+);
+
+const reviews =
+snap.data()
+.reviews || [];
+
+  const list =
+    document.getElementById(
+      "reviews-list"
+    );
+
+  // EMPTY
+  if (reviews.length === 0) {
+
+    list.innerHTML = `
+
+      <div class="empty-state">
+
+        <div class="icon">💬</div>
+
+        <p>
+          No reviews yet.<br/>
+          Be the first!
+        </p>
+
+      </div>
+
+    `;
+
+    return;
+
+  }
+
+  // CARDS
+  list.innerHTML = reviews.map(review => `
+
+    <div class="review-card">
+
+      <div class="review-top">
+
+        <div class="review-dish">
+
+          ${review.dishName}
+
+        </div>
+
+        <div class="review-rating">
+
+          ${"★".repeat(review.rating)}
+          ${"☆".repeat(5 - review.rating)}
+
+        </div>
+
+      </div>
+
+      <div class="review-comment">
+
+        ${review.comment}
+
+      </div>
+
+      <div class="review-time">
+
+        ${window.fmtDate(review.ts)}
+
+      </div>
+
+    </div>
+
+  `).join("");
+
+}
+
+/* =========================
+   INIT
+========================= */
+
+
+</script>
+</body>
+</html>
