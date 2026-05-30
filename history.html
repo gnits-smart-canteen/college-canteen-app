@@ -102,50 +102,48 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 
 // RENDER HISTORY
-function render() {
+async function render() {
+
+  const ref =
+    window.doc(
+      window.db,
+      "erp_users",
+      roll
+    );
+
+  const snap =
+    await window.getDoc(ref);
+
+  const data =
+    snap.exists()
+      ? snap.data()
+      : {};
 
   const orders =
-    window.getOrders()
-      .filter(o => o.roll === roll);
+    data.orders || [];
 
   const wrap =
     document.getElementById("history-wrap");
 
-  // EMPTY STATE
   if (orders.length === 0) {
 
     wrap.innerHTML = `
-
       <div class="empty-state">
-
         <div class="icon">🍽️</div>
-
         <p>
           No orders yet.<br/>
-
-          <a
-            href="menu.html"
-            style="
-              color:var(--primary);
-              font-weight:600;
-            "
-          >
-            Start ordering!
+          <a href="menu.html"
+             style="color:var(--primary);font-weight:600;">
+             Start ordering!
           </a>
-
         </p>
-
       </div>
-
     `;
 
     return;
-
   }
 
-  // CARDS
   wrap.innerHTML = orders.map(order => `
-
     <div
       class="history-card"
       onclick="showReceipt('${order.id}')"
@@ -155,22 +153,12 @@ function render() {
 
         <div>
 
-          <div style="
-            font-weight:700;
-            font-size:1rem;
-          ">
-
-            ${order.items
-              .map(i => i.item)
-              .join(", ")}
-
+          <div style="font-weight:700;font-size:1rem;">
+            ${order.items.map(i => i.item).join(", ")}
           </div>
 
           <div class="h-id">
-
-            Receipt:
-            ${order.id}
-
+            Receipt: ${order.id}
           </div>
 
         </div>
@@ -181,18 +169,10 @@ function render() {
             ₹${order.total}
           </div>
 
-          <div style="
-            font-size:0.78rem;
-            margin-top:0.25rem;
-          ">
-
-            <span class="
-              badge
-              badge-${order.status.toLowerCase()}
-            ">
+          <div style="font-size:0.78rem;margin-top:0.25rem;">
+            <span class="badge badge-${order.status.toLowerCase()}">
               ${order.status}
             </span>
-
           </div>
 
         </div>
@@ -206,28 +186,24 @@ function render() {
       ">
 
         <div class="h-date">
-
           ${window.fmtDate(order.placedAt)}
-
         </div>
 
         <div style="
           font-size:0.8rem;
           color:var(--muted);
         ">
-
           💵 Cash
-
         </div>
 
       </div>
 
     </div>
-
   `).join("");
 
-}
+  window.firebaseOrders = orders;
 
+}
 // RECEIPT MODAL
 window.showReceipt = function(id) {
 
