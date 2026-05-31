@@ -41,76 +41,338 @@
 </div>
 
 <div id="toast" class="toast"></div>
-<script src="../data/menu.js"></script>
-<script src="../js/app.js"></script>
-<script>
-  function populateSelect() {
-    const sel = document.getElementById('item-select');
-    const specials = getSpecials();
-    const specialIds = specials.map(s => s.id);
-    sel.innerHTML = '<option value="">-- Select item --</option>';
-    const cats = [...new Set(MENU.map(m => m.category))];
-    cats.forEach(cat => {
-      const items = MENU.filter(m => m.category === cat && !specialIds.includes(m.id));
-      if (items.length === 0) return;
-      sel.innerHTML += `<optgroup label="${cat}">` +
-        items.map(i => `<option value="${i.id}">${i.item} (₹${i.price})</option>`).join('') +
-        `</optgroup>`;
-    });
-  }
+<script src="../js/menu.js"></script>
 
-  function addSpecialItem() {
-    const id = parseInt(document.getElementById('item-select').value);
-    const price = parseInt(document.getElementById('special-price').value);
-    const err = document.getElementById('sp-err');
-    if (!id) { err.textContent = 'Please select an item.'; return; }
-    if (!price || price <= 0) { err.textContent = 'Please enter a valid price.'; return; }
-    const specials = getSpecials();
-    if (specials.find(s => s.id === id)) { err.textContent = 'Already added.'; return; }
-    specials.push({ id, specialPrice: price });
-    saveSpecials(specials);
-    err.textContent = '';
-    document.getElementById('item-select').value = '';
-    document.getElementById('special-price').value = '';
-    toast('Special added!');
-    populateSelect();
-    renderSpecials();
-  }
+<script type="module">
 
-  function removeSpecial(id) {
-    const specials = getSpecials().filter(s => s.id !== id);
-    saveSpecials(specials);
-    populateSelect();
-    renderSpecials();
-    toast('Removed from specials.');
-  }
+import "../js/app.js";
 
-  function renderSpecials() {
-    const specials = getSpecials();
-    const list = document.getElementById('specials-list');
-    if (specials.length === 0) {
-      list.innerHTML = `<div class="empty-state"><div class="icon">⭐</div><p>No specials set for today.</p></div>`;
-      return;
+/* ---------- helpers ---------- */
+
+function findItem(id){
+
+  for(const section of MENU){
+
+    if(section.items){
+
+      const item =
+        section.items.find(
+          i => i.id === id
+        );
+
+      if(item) return item;
+
     }
-    list.innerHTML = `<table class="orders-table">
-      <thead><tr><th>Item</th><th>Category</th><th>Original Price</th><th>Special Price</th><th>Wait</th><th>Action</th></tr></thead>
-      <tbody>` +
-      specials.map(s => {
-        const item = MENU.find(m => m.id === s.id);
-        return `<tr>
-          <td style="font-weight:600;">${item.item}</td>
-          <td>${item.category}</td>
-          <td>₹${item.price}</td>
-          <td style="color:var(--primary);font-weight:700;">₹${s.specialPrice}</td>
-          <td>~${item.wait} mins</td>
-          <td><button class="btn-remove" onclick="removeSpecial(${s.id})">Remove</button></td>
-        </tr>`;
-      }).join('') +
-      `</tbody></table>`;
+
+    if(section.groups){
+
+      for(const group of section.groups){
+
+        const item =
+          group.items.find(
+            i => i.id === id
+          );
+
+        if(item) return item;
+
+      }
+
+    }
+
   }
 
-  populateSelect();
-  renderSpecials();
+  return null;
+
+}
+
+/* ---------- dropdown ---------- */
+
+async function populateSelect(){
+
+  const sel =
+    document.getElementById(
+      "item-select"
+    );
+
+  const specials =
+    await window.getSpecials();
+
+  const specialIds =
+    specials.map(
+      s => s.id
+    );
+
+  sel.innerHTML =
+    `<option value="">
+      -- Select item --
+    </option>`;
+
+  for(const section of MENU){
+
+    const items = [];
+
+    if(section.items){
+
+      items.push(
+        ...section.items
+      );
+
+    }
+
+    if(section.groups){
+
+      section.groups.forEach(g =>
+        items.push(
+          ...g.items
+        )
+      );
+
+    }
+
+    items.forEach(item=>{
+
+      if(
+        !specialIds.includes(
+          item.id
+        )
+      ){
+
+        sel.innerHTML += `
+          <option value="${item.id}">
+            ${item.item}
+            (₹${item.price})
+          </option>
+        `;
+
+      }
+
+    });
+
+  }
+
+}
+
+/* ---------- add ---------- */
+
+window.addSpecialItem =
+async function(){
+
+const id =
+parseInt(
+document.getElementById(
+"item-select"
+).value
+);
+
+const price =
+parseInt(
+document.getElementById(
+"special-price"
+).value
+);
+
+const err =
+document.getElementById(
+"sp-err"
+);
+
+err.textContent="";
+
+if(!id){
+
+err.textContent=
+"Select item";
+
+return;
+
+}
+
+if(!price){
+
+err.textContent=
+"Enter price";
+
+return;
+
+}
+
+const specials =
+await window.getSpecials();
+
+specials.push({
+
+id,
+specialPrice:price
+
+});
+
+await window.saveSpecials(
+specials
+);
+
+toast(
+"Special added!"
+);
+
+populateSelect();
+
+renderSpecials();
+
+};
+
+/* ---------- remove ---------- */
+
+window.removeSpecial =
+async function(id){
+
+const updated =
+(
+await window.getSpecials()
+).filter(
+s=>s.id!==id
+);
+
+await window.saveSpecials(
+updated
+);
+
+populateSelect();
+
+renderSpecials();
+
+};
+
+/* ---------- render ---------- */
+
+async function renderSpecials(){
+
+const specials =
+await window.getSpecials();
+
+const list =
+document.getElementById(
+"specials-list"
+);
+
+if(
+specials.length===0
+){
+
+list.innerHTML=
+`
+<div class="empty-state">
+<div class="icon">
+⭐
+</div>
+<p>
+No specials yet
+</p>
+</div>
+`;
+
+return;
+
+}
+
+list.innerHTML=
+`
+<table class="orders-table">
+
+<thead>
+
+<tr>
+
+<th>Item</th>
+
+<th>Price</th>
+
+<th>Special</th>
+
+<th>Wait</th>
+
+<th></th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+${specials.map(s=>{
+
+const item =
+findItem(
+s.id
+);
+
+if(!item)
+return "";
+
+return `
+
+<tr>
+
+<td>
+${item.item}
+</td>
+
+<td>
+₹${item.price}
+</td>
+
+<td
+style="
+color:
+var(--primary);
+
+font-weight:700;
+"
+>
+₹${s.specialPrice}
+</td>
+
+<td>
+~${item.wait}
+mins
+</td>
+
+<td>
+
+<button
+class="btn-remove"
+
+onclick="
+removeSpecial(
+${s.id}
+)
+"
+>
+
+Remove
+
+</button>
+
+</td>
+
+</tr>
+
+`;
+
+}).join("")}
+
+</tbody>
+
+</table>
+`;
+
+}
+
+/* ---------- init ---------- */
+
+await populateSelect();
+
+await renderSpecials();
+
 </script>
 </body>
 </html>
