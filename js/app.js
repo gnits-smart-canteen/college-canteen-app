@@ -172,18 +172,19 @@ function updateCartBadge() {
 function getOrders() { return JSON.parse(localStorage.getItem('sc_orders') || '[]'); }
 function saveOrders(o) { localStorage.setItem('sc_orders', JSON.stringify(o)); }
 
-function placeOrder(cart, total, roll) {
+function placeOrder(cart, total, roll, orderType = "Dine In") {
   const orders = getOrders();
   const maxWait = Math.max(...cart.map(c => c.wait));
   const order = {
-    id: genReceiptId(),
-    roll,
-    items: cart,
-    total,
-    status: 'Placed',
-    placedAt: Date.now(),
-    waitMins: maxWait,
-    payment: 'UPI'
+  id: genReceiptId(),
+  roll,
+  items: cart,
+  total,
+  orderType,
+  status: 'Placed',
+  placedAt: Date.now(),
+  waitMins: maxWait,
+  payment: 'UPI'
   };
   orders.unshift(order);
   saveOrders(orders);

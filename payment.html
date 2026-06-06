@@ -68,7 +68,17 @@
       <div class="secure-note">
         🔒 100% Secure Payments
       </div>
-
+      <div class="order-type-box">
+      <div class="order-type-title">Order Type</div>
+      <label>
+      <input type="radio" name="orderType" value="Dine In" checked>
+       🍽️ Dine In
+      </label>
+      <label>
+      <input type="radio" name="orderType" value="Parcel">
+       📦 Parcel
+      </label>
+      </div>
       <button class="pay-btn" onclick="completePayment()">
         Pay ₹<span id="btn-total">0</span>
       </button>
@@ -140,11 +150,12 @@ window.addEventListener('DOMContentLoaded', () => {
   try {
 
     const roll = getCurrentUser();
-
     const cart = getCart();
-
     const total = cartTotal();
-
+    const orderType =
+    document.querySelector(
+    'input[name="orderType"]:checked'
+  ).value;
     if (!cart.length) {
       alert("Cart empty");
       return;
@@ -155,7 +166,8 @@ window.addEventListener('DOMContentLoaded', () => {
       placeOrder(
         cart,
         total,
-        roll
+        roll,
+        orderType
       );
 
     console.log("ORDER", order);

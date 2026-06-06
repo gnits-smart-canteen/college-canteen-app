@@ -78,140 +78,321 @@
 </div>
 
 <div id="toast" class="toast"></div>
-<script src="data/menu.js"></script>
-<script type="module" src="js/app.js"></script>
-<script>
-  document.getElementById('dash-date').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+<script src="../js/menu.js"></script>
 
-  function getFilteredOrders() {
-    const all = getOrders();
-    const filter = document.getElementById('date-filter').value;
-    if (filter === 'today') {
-      const today = new Date(); today.setHours(0,0,0,0);
-      return all.filter(o => o.placedAt >= today.getTime());
+<script type="module">
+import {
+  getOrders,
+  getUsers
+} from "../js/firebase-admin.js";
+
+document.getElementById("dash-date").textContent =
+  new Date().toLocaleDateString("en-IN", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
+
+function fmtDate(ts) {
+  return new Date(ts).toLocaleString("en-IN", {
+    dateStyle: "medium",
+    timeStyle: "short"
+  });
+}
+
+function getAllMenuItems() {
+  return (window.MENU || []).flatMap(cat => {
+    if (cat.groups) {
+      return cat.groups.flatMap(group =>
+        group.items.map(item => ({
+          ...item,
+          category: cat.category,
+          group: group.name
+        }))
+      );
     }
-    return all;
+
+    if (cat.items) {
+      return cat.items.map(item => ({
+        ...item,
+        category: cat.category
+      }));
+    }
+
+    return [];
+  });
+}
+
+function getCategoryByItemId(id) {
+  const item = getAllMenuItems().find(m => m.id === id);
+  return item?.category || "Other";
+}
+
+async function getFilteredOrders() {
+  const all = await getOrders();
+
+  const filter =
+    document.getElementById("date-filter").value;
+
+  if (filter === "today") {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return all.filter(o =>
+      o.placedAt >= today.getTime()
+    );
   }
 
-  function render() {
-    const orders = getFilteredOrders();
-    const users = getUsers();
+  return all;
+}
 
-    // Stats
-    const totalRevenue = orders.reduce((s, o) => s + o.total, 0);
-    const totalOrders = orders.length;
-    const avgOrder = totalOrders ? Math.round(totalRevenue / totalOrders) : 0;
-    const uniqueStudents = new Set(orders.map(o => o.roll)).size;
-    const dineIn = orders.filter(o => o.orderType === 'Dine In').length;
-    const parcel = orders.filter(o => o.orderType === 'Parcel').length;
+window.render = async function () {
+  const orders = await getFilteredOrders();
+  const users = await getUsers();
 
-    document.getElementById('stat-grid').innerHTML = [
-      { val: '₹' + totalRevenue, label: 'Total Revenue' },
-      { val: totalOrders, label: 'Total Orders' },
-      { val: '₹' + avgOrder, label: 'Avg Order Value' },
-      { val: uniqueStudents, label: 'Unique Students' },
-      { val: dineIn, label: 'Dine In Orders' },
-      { val: parcel, label: 'Parcel Orders' },
-    ].map(s => `<div class="stat-card"><div class="s-val">${s.val}</div><div class="s-label">${s.label}</div></div>`).join('');
+  const totalRevenue =
+    orders.reduce((s, o) => s + Number(o.total || 0), 0);
 
-    // Top items
-    const itemCount = {};
-    orders.forEach(o => o.items.forEach(i => {
-      itemCount[i.item] = (itemCount[i.item] || 0) + i.qty;
-    }));
-    const topItems = Object.entries(itemCount).sort((a,b) => b[1]-a[1]).slice(0,10);
-    const maxItem = topItems[0]?.[1] || 1;
-    document.getElementById('top-items-chart').innerHTML = topItems.map(([name, cnt]) =>
-      `<div class="bar-row">
-        <div class="bar-label">${name}</div>
-        <div class="bar-fill-wrap"><div class="bar-fill" style="width:${(cnt/maxItem)*100}%">${cnt}</div></div>
-        <div class="bar-val">${cnt} orders</div>
-      </div>`).join('') || '<div class="text-muted">No data</div>';
+  const totalOrders = orders.length;
 
-    // Category revenue
-    const catRev = {};
-    orders.forEach(o => o.items.forEach(i => {
-      const cat = MENU.find(m => m.id === i.id)?.category || 'Other';
-      catRev[cat] = (catRev[cat] || 0) + i.price * i.qty;
-    }));
-    const catEntries = Object.entries(catRev).sort((a,b) => b[1]-a[1]);
-    const maxCat = catEntries[0]?.[1] || 1;
-    document.getElementById('cat-chart').innerHTML = catEntries.map(([cat, rev]) =>
-      `<div class="bar-row">
-        <div class="bar-label">${cat}</div>
-        <div class="bar-fill-wrap"><div class="bar-fill" style="width:${(rev/maxCat)*100}%;background:var(--secondary);color:#333;">₹${rev}</div></div>
-        <div class="bar-val">₹${rev}</div>
-      </div>`).join('') || '<div class="text-muted">No data</div>';
+  const avgOrder =
+    totalOrders
+      ? Math.round(totalRevenue / totalOrders)
+      : 0;
 
-    // Dine In vs Parcel
-    document.getElementById('type-split').innerHTML = `
-      <div style="display:flex;gap:1.5rem;align-items:center;justify-content:center;padding:1rem 0;">
-        <div style="text-align:center;">
-          <div style="font-size:2rem;">🍽️</div>
-          <div style="font-size:1.5rem;font-weight:700;color:var(--primary);">${dineIn}</div>
-          <div style="color:var(--muted);font-size:0.85rem;">Dine In</div>
+  const uniqueStudents =
+    new Set(orders.map(o => o.roll)).size;
+
+  const dineIn =
+  orders.filter(o =>
+    !o.orderType ||
+    o.orderType === "Dine In"
+  ).length;
+
+  const parcel =
+  orders.filter(o =>
+    o.orderType === "Parcel"
+  ).length;
+
+  document.getElementById("stat-grid").innerHTML =
+    [
+      { val: "₹" + totalRevenue, label: "Total Revenue" },
+      { val: totalOrders, label: "Total Orders" },
+      { val: "₹" + avgOrder, label: "Avg Order Value" },
+      { val: uniqueStudents, label: "Unique Students" },
+      { val: dineIn, label: "Dine In Orders" },
+      { val: parcel, label: "Parcel Orders" }
+    ].map(s => `
+      <div class="stat-card">
+        <div class="s-val">${s.val}</div>
+        <div class="s-label">${s.label}</div>
+      </div>
+    `).join("");
+
+  const itemCount = {};
+
+  orders.forEach(o => {
+    (o.items || []).forEach(i => {
+      itemCount[i.item] =
+        (itemCount[i.item] || 0) + Number(i.qty || 0);
+    });
+  });
+
+  const topItems =
+    Object.entries(itemCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+
+  const maxItem = topItems[0]?.[1] || 1;
+
+  document.getElementById("top-items-chart").innerHTML =
+    topItems.length
+      ? topItems.map(([name, cnt]) => `
+        <div class="bar-row">
+          <div class="bar-label">${name}</div>
+          <div class="bar-fill-wrap">
+            <div class="bar-fill" style="width:${(cnt / maxItem) * 100}%">
+              ${cnt}
+            </div>
+          </div>
+          <div class="bar-val">${cnt}</div>
         </div>
-        <div style="font-size:1.5rem;color:#ddd;">|</div>
-        <div style="text-align:center;">
-          <div style="font-size:2rem;">📦</div>
-          <div style="font-size:1.5rem;font-weight:700;color:var(--primary);">${parcel}</div>
-          <div style="color:var(--muted);font-size:0.85rem;">Parcel</div>
-        </div>
-      </div>`;
+      `).join("")
+      : `<div class="text-muted">No data</div>`;
 
-    // Status split
-    const statusCount = { Placed: 0, Preparing: 0, Ready: 0 };
-    orders.forEach(o => { if (statusCount[o.status] !== undefined) statusCount[o.status]++; });
-    document.getElementById('status-split').innerHTML = Object.entries(statusCount).map(([s, c]) =>
-      `<div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border);">
+  const catRev = {};
+
+  orders.forEach(o => {
+    (o.items || []).forEach(i => {
+      const cat = getCategoryByItemId(i.id);
+      catRev[cat] =
+        (catRev[cat] || 0) + Number(i.price || 0) * Number(i.qty || 0);
+    });
+  });
+
+  const catEntries =
+    Object.entries(catRev)
+      .sort((a, b) => b[1] - a[1]);
+
+  const maxCat = catEntries[0]?.[1] || 1;
+
+  document.getElementById("cat-chart").innerHTML =
+    catEntries.length
+      ? catEntries.map(([cat, rev]) => `
+        <div class="bar-row">
+          <div class="bar-label">${cat}</div>
+          <div class="bar-fill-wrap">
+            <div class="bar-fill" style="width:${(rev / maxCat) * 100}%">
+              ₹${rev}
+            </div>
+          </div>
+          <div class="bar-val">₹${rev}</div>
+        </div>
+      `).join("")
+      : `<div class="text-muted">No data</div>`;
+
+  document.getElementById("type-split").innerHTML = `
+    <div style="display:flex;gap:1.5rem;align-items:center;justify-content:center;padding:1rem 0;">
+      <div style="text-align:center;">
+        <div style="font-size:2rem;">🍽️</div>
+        <div style="font-size:1.5rem;font-weight:700;color:var(--primary);">${dineIn}</div>
+        <div style="color:var(--muted);font-size:0.85rem;">Dine In</div>
+      </div>
+
+      <div style="font-size:1.5rem;color:#ddd;">|</div>
+
+      <div style="text-align:center;">
+        <div style="font-size:2rem;">📦</div>
+        <div style="font-size:1.5rem;font-weight:700;color:var(--primary);">${parcel}</div>
+        <div style="color:var(--muted);font-size:0.85rem;">Parcel</div>
+      </div>
+    </div>
+  `;
+
+  const statusCount = {
+    Placed: 0,
+    Preparing: 0,
+    Ready: 0
+  };
+
+  orders.forEach(o => {
+    if (statusCount[o.status] !== undefined) {
+      statusCount[o.status]++;
+    }
+  });
+
+  document.getElementById("status-split").innerHTML =
+    Object.entries(statusCount).map(([s, c]) => `
+      <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid var(--border);">
         <span class="badge badge-${s.toLowerCase()}">${s}</span>
         <span style="font-weight:600;">${c} orders</span>
-      </div>`).join('');
+      </div>
+    `).join("");
 
-    // All orders table
-    const tbody = document.getElementById('all-orders-body');
-    const noOrders = document.getElementById('no-orders');
-    if (orders.length === 0) { tbody.innerHTML = ''; noOrders.style.display = 'block'; return; }
-    noOrders.style.display = 'none';
-    tbody.innerHTML = orders.map(o => `
+  const tbody =
+    document.getElementById("all-orders-body");
+
+  const noOrders =
+    document.getElementById("no-orders");
+
+  if (!orders.length) {
+    tbody.innerHTML = "";
+    noOrders.style.display = "block";
+    return;
+  }
+
+  noOrders.style.display = "none";
+
+  tbody.innerHTML =
+    orders.map(o => `
       <tr>
         <td style="font-size:0.75rem;">${o.id}</td>
-        <td>${users[o.roll]?.name || o.roll}</td>
-        <td style="max-width:180px;font-size:0.82rem;">${o.items.map(i => `${i.item}×${i.qty}`).join(', ')}</td>
-        <td>${o.orderType === 'Parcel' ? '📦' : '🍽️'} ${o.orderType}</td>
-        <td style="font-weight:700;color:var(--primary);">₹${o.total}</td>
-        <td><span class="badge badge-${o.status.toLowerCase()}">${o.status}</span></td>
-        <td style="font-size:0.8rem;">${fmtDate(o.placedAt)}</td>
-      </tr>`).join('');
-  }
 
-  function exportCSV() {
-    const orders = getFilteredOrders();
-    const users = getUsers();
-    const rows = [['Receipt ID','Student','Roll No','Items','Order Type','Total','Status','Payment','Time']];
-    orders.forEach(o => {
-      rows.push([
-        o.id,
-        users[o.roll]?.name || o.roll,
-        o.roll,
-        o.items.map(i => `${i.item}x${i.qty}`).join(' | '),
-        o.orderType,
-        o.total,
-        o.status,
-        o.payment,
-        fmtDate(o.placedAt)
-      ]);
-    });
-    const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `gnits-canteen-orders-${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();
-    toast('CSV exported!');
-  }
+        <td>
+          ${users[o.roll]?.name || o.roll}
+          <br>
+          <span style="font-size:0.75rem;color:#aaa;">${o.roll}</span>
+        </td>
 
-  render();
+        <td style="max-width:180px;font-size:0.82rem;">
+          ${(o.items || []).map(i => `${i.item} ×${i.qty}`).join(", ")}
+        </td>
+
+        <td>
+          ${o.orderType === "Parcel" ? "📦 Parcel" : "🍽️ Dine In"}
+        </td>
+
+        <td style="font-weight:700;color:var(--primary);">
+          ₹${o.total}
+        </td>
+
+        <td>
+          <span class="badge badge-${o.status.toLowerCase()}">
+            ${o.status}
+          </span>
+        </td>
+
+        <td style="font-size:0.8rem;">
+          ${fmtDate(o.placedAt)}
+        </td>
+      </tr>
+    `).join("");
+};
+
+window.exportCSV = async function () {
+  const orders = await getFilteredOrders();
+  const users = await getUsers();
+
+  const rows = [
+    [
+      "Receipt ID",
+      "Student",
+      "Roll No",
+      "Items",
+      "Order Type",
+      "Total",
+      "Status",
+      "Payment",
+      "Time"
+    ]
+  ];
+
+  orders.forEach(o => {
+    rows.push([
+      o.id,
+      users[o.roll]?.name || o.roll,
+      o.roll,
+      (o.items || []).map(i => `${i.item}x${i.qty}`).join(" | "),
+      o.orderType,
+      o.total,
+      o.status,
+      o.payment,
+      fmtDate(o.placedAt)
+    ]);
+  });
+
+  const csv =
+    rows.map(r =>
+      r.map(v => `"${String(v ?? "").replaceAll('"', '""')}"`).join(",")
+    ).join("\n");
+
+  const blob =
+    new Blob([csv], { type: "text/csv" });
+
+  const a =
+    document.createElement("a");
+
+  a.href =
+    URL.createObjectURL(blob);
+
+  a.download =
+    `gnits-canteen-orders-${new Date().toISOString().slice(0,10)}.csv`;
+
+  a.click();
+};
+
+await window.render();
 </script>
 </body>
 </html>
