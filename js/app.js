@@ -1,12 +1,18 @@
 import { auth } from "./firebase-config.js";
 import { signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
- doc,
- getDoc,
- updateDoc
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  arrayUnion
 }
-from
-"https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+import {
+db
+}
+from "./firebase-config.js";
 
 // ── Utility ──────────────────────────────────────────────────────────────────
 function toast(msg) {
@@ -24,9 +30,34 @@ function fmtDate(ts) {
   return new Date(ts).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
-function getUsers() { return JSON.parse(localStorage.getItem('sc_users') || '{}'); }
-function saveUsers(u) { localStorage.setItem('sc_users', JSON.stringify(u)); }
+// ── Auth ───────────────────────────────────────────────────────────────
+window.getUsers =
+async function () {
+
+  const roll =
+    getCurrentUser();
+
+  if (!roll)
+    return {};
+
+  const snap =
+    await getDoc(
+      doc(
+        db,
+        "erp_users",
+        roll
+      )
+    );
+
+  if (!snap.exists())
+    return {};
+
+  return {
+    [roll]:
+      snap.data()
+  };
+
+};
 function setCurrentUser(roll) { localStorage.setItem('sc_current_user', roll); }
 async function logout() {
 
@@ -177,8 +208,31 @@ window.addReview = addReview;
 window.getReviews = getReviews;
 
 // ── Daily Specials ────────────────────────────────────────────────────────────
-function getSpecials() { return JSON.parse(localStorage.getItem('sc_specials') || '[]'); }
-function saveSpecials(s) { localStorage.setItem('sc_specials', JSON.stringify(s)); }
+
+window.getSpecials = async function () {
+
+  const snap =
+    await getDoc(
+      doc(db, "canteen", "specials")
+    );
+
+  if(!snap.exists())
+    return [];
+
+  return snap.data().items || [];
+
+};
+
+window.saveSpecials = async function (items) {
+
+  await setDoc(
+    doc(db, "canteen", "specials"),
+    {
+      items
+    }
+  );
+
+};
 
 window.getSpecials = getSpecials;
 window.getCart = getCart;
