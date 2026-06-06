@@ -47,10 +47,9 @@ window.addEventListener("DOMContentLoaded", () => {
   window.requireAuth((user) => {
 
     const roll =
-      user.email.replace(
-        "@gnitscanteen.com",
-        ""
-      );
+      user.email
+        .replace("@gnitscanteen.com", "")
+        .toUpperCase();
 
     const STATUSES = [
       "Placed",
@@ -62,48 +61,45 @@ window.addEventListener("DOMContentLoaded", () => {
       return STATUSES.indexOf(s);
     }
 
-    function render() {
-      // AUTO UPDATE STATUS BASED ON TIME
-      const orders = window.getOrders();
-      orders.forEach(order => {
+    async function getFirebaseOrders() {
 
-const minsPassed =
-    (Date.now() - order.placedAt) / 60000;
+      const ref =
+        window.doc(
+          window.db,
+          "erp_users",
+          roll
+        );
 
-  // HALF TIME = PREPARING
-  if (
-    minsPassed >= order.waitMins / 2 &&
-    order.status === "Placed"
-  ) {
-    order.status = "Preparing";
-  }
+      const snap =
+        await window.getDoc(ref);
 
-  // FULL TIME = READY
-  if (
-    minsPassed >= order.waitMins &&
-    order.status !== "Ready"
-  ) {
-    order.status = "Ready";
-  }
+      if (!snap.exists())
+        return [];
 
-});
+      const data =
+        snap.data();
 
-window.saveOrders(orders);
-      const active = orders.filter(order => {
+      return data.orders || [];
 
-  // only this user's orders
-  if (order.roll !== roll) return false;
+    }
 
-  // show placed/preparing always
-  if (order.status !== "Ready") return true;
+    async function render() {
 
-  // show ready only for 10 mins
-  return (
-    Date.now() - order.placedAt
-    < (order.waitMins + 10) * 60000
-  );
+      const orders =
+        await getFirebaseOrders();
 
-});
+      const active =
+        orders.filter(order => {
+
+          if (order.status !== "Ready")
+            return true;
+
+          return (
+            Date.now() - order.placedAt
+            < (Number(order.waitMins || 0) + 10) * 60000
+          );
+
+        });
 
       const wrap =
         document.getElementById("track-wrap");
@@ -120,88 +116,92 @@ window.saveOrders(orders);
         return;
       }
 
-      wrap.innerHTML = active.map(order => {
+      wrap.innerHTML =
+        active.map(order => {
 
-        const si =
-          statusIndex(order.status);
+          const si =
+            statusIndex(order.status);
 
-        return `
+          return `
+            <div class="order-track-card">
 
-          <div class="order-track-card">
+              <div class="ot-header">
 
-            <div class="ot-header">
+                <div>
+                  <div style="font-weight:600;">
+                    ${(order.items || []).map(i => i.item).join(", ")}
+                  </div>
 
-              <div>
-                <div style="font-weight:600;">
-                  ${order.items.map(i => i.item).join(", ")}
+                  <div class="ot-id">
+                    Receipt: ${order.id}
+                  </div>
                 </div>
 
-                <div class="ot-id">
-                  Receipt: ${order.id}
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.3rem;">
+                  <span class="wait-badge">
+                    ⏱ ~${order.waitMins} mins
+                  </span>
+
+                  <span style="font-size:0.78rem;color:var(--muted);">
+                    ${order.orderType === "Parcel" ? "📦 Parcel" : "🍽️ Dine In"}
+                  </span>
                 </div>
+
               </div>
 
-              <span class="wait-badge">
-                ⏱ ~${order.waitMins} mins
-              </span>
+              <div class="status-bar">
 
-            </div>
+                ${STATUSES.map((s, i) => `
 
-            <div class="status-bar">
+                  <div class="status-step ${i < si ? "done" : i === si ? "active" : ""}">
 
-              ${STATUSES.map((s, i) => `
+                    <div class="dot">
+                      ${i < si ? "✓" : i + 1}
+                    </div>
 
-                <div class="status-step ${i < si ? 'done' : i === si ? 'active' : ''}">
+                    <div class="label">
+                      ${s}
+                    </div>
 
-                  <div class="dot">
-                    ${i < si ? '✓' : i + 1}
                   </div>
 
-                  <div class="label">
-                    ${s}
-                  </div>
+                  ${i < STATUSES.length - 1
+                    ? `<div class="status-line ${i < si ? "done" : ""}"></div>`
+                    : ""
+                  }
 
-                </div>
+                `).join("")}
 
-                ${i < STATUSES.length - 1
-                  ? `<div class="status-line ${i < si ? 'done' : ''}"></div>`
-                  : ''
-                }
+              </div>
 
-              `).join("")}
+              <div style="
+                margin-top:1rem;
+                display:flex;
+                justify-content:space-between;
+              ">
+                <span>
+                  ₹${order.total}
+                </span>
+
+                <span style="color:var(--muted);">
+                  ${window.fmtDate(order.placedAt)}
+                </span>
+              </div>
 
             </div>
+          `;
 
-            <div style="
-              margin-top:1rem;
-              display:flex;
-              justify-content:space-between;
-            ">
-              <span>
-                ₹${order.total}
-              </span>
-
-              <span style="color:var(--muted);">
-                ${window.fmtDate(order.placedAt)}
-              </span>
-            </div>
-
-          </div>
-
-        `;
-
-      }).join("");
+        }).join("");
 
     }
 
     render();
 
-    setInterval(render, 15000);
+    setInterval(render, 5000);
 
   });
 
 });
-
 </script>
 </body>
 </html>
