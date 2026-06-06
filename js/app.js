@@ -232,11 +232,11 @@ window.saveSpecials = async function (items) {
       items
     }
   );
-
+  console.log("Saved specials to Firebase:", items);
 };
 function getSpecials() { return JSON.parse(localStorage.getItem('sc_specials') || '[]'); }
 function saveSpecials(s) { localStorage.setItem('sc_specials', JSON.stringify(s)); }
-window.getSpecials = getSpecials;
+
 window.getCart = getCart;
 window.addToCart = addToCart;
 window.updateCartQty = updateCartQty;
