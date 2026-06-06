@@ -10,9 +10,11 @@ import {
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 import {
-db
+  db
 }
 from "./firebase-config.js";
+from
+"https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ── Utility ──────────────────────────────────────────────────────────────────
 function toast(msg) {
@@ -29,7 +31,6 @@ function genReceiptId() {
 function fmtDate(ts) {
   return new Date(ts).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
 }
-
 // ── Auth ───────────────────────────────────────────────────────────────
 window.getUsers =
 async function () {
@@ -58,6 +59,9 @@ async function () {
   };
 
 };
+// ── Auth ──────────────────────────────────────────────────────────────────────
+function getUsers() { return JSON.parse(localStorage.getItem('sc_users') || '{}'); }
+function saveUsers(u) { localStorage.setItem('sc_users', JSON.stringify(u)); }
 function setCurrentUser(roll) { localStorage.setItem('sc_current_user', roll); }
 async function logout() {
 
@@ -208,7 +212,6 @@ window.addReview = addReview;
 window.getReviews = getReviews;
 
 // ── Daily Specials ────────────────────────────────────────────────────────────
-
 window.getSpecials = async function () {
 
   const snap =
@@ -233,7 +236,8 @@ window.saveSpecials = async function (items) {
   );
 
 };
-
+function getSpecials() { return JSON.parse(localStorage.getItem('sc_specials') || '[]'); }
+function saveSpecials(s) { localStorage.setItem('sc_specials', JSON.stringify(s)); }
 window.getSpecials = getSpecials;
 window.getCart = getCart;
 window.addToCart = addToCart;
@@ -255,4 +259,5 @@ window.getUsers = getUsers;
 window.saveOrders = saveOrders;
 window.doc = doc;
 window.getDoc = getDoc;
+window.updateDoc = updateDoc;
 window.updateDoc = updateDoc;
