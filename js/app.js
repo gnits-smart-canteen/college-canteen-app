@@ -13,8 +13,6 @@ import {
   db
 }
 from "./firebase-config.js";
-from
-"https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ── Utility ──────────────────────────────────────────────────────────────────
 function toast(msg) {
