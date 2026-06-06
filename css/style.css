@@ -1464,7 +1464,7 @@ box-shadow:
 
 .special-card::before{
 
-content:"⭐ TODAY'S PICK";
+content:"â­ TODAY'S PICK";
 
 position:absolute;
 
@@ -1821,6 +1821,458 @@ sans-serif;
     flex-direction:column;
     align-items:flex-start;
     gap:1rem;
+  }
+
+}
+
+/* =====================================================
+   FINAL MOBILE + CLEANUP OVERRIDES
+   Add this at the VERY BOTTOM of style.css
+===================================================== */
+
+html,
+body{
+  max-width:100%;
+  overflow-x:hidden;
+}
+
+img,
+video,
+canvas,
+svg{
+  max-width:100%;
+}
+
+button,
+input,
+select,
+textarea{
+  font-family:'Poppins', sans-serif;
+}
+
+/* Fix duplicated table styles from earlier blocks */
+.orders-table{
+  width:100%;
+  border-collapse:separate !important;
+  border-spacing:0 14px !important;
+}
+
+.orders-table th{
+  background:transparent !important;
+  font-size:0.9rem;
+  color:var(--muted);
+  font-weight:700;
+  text-align:left;
+  padding:0 14px !important;
+  white-space:nowrap;
+}
+
+.orders-table td{
+  background:#fff !important;
+  padding:18px 14px !important;
+  border-top:none !important;
+  vertical-align:middle;
+  font-size:0.92rem;
+}
+
+.orders-table tr td:first-child{
+  border-radius:14px 0 0 14px;
+}
+
+.orders-table tr td:last-child{
+  border-radius:0 14px 14px 0;
+}
+
+.orders-table tr:hover{
+  background:transparent !important;
+}
+
+/* Order type selection on payment page */
+.order-type-box{
+  margin:1rem 0 1.2rem;
+  padding:1rem;
+  border:1.5px solid #e8ecef;
+  border-radius:18px;
+  background:#fff;
+}
+
+.order-type-title{
+  font-weight:700;
+  color:#2f3542;
+  margin-bottom:0.8rem;
+}
+
+.order-type-box label{
+  display:flex;
+  align-items:center;
+  gap:0.6rem;
+  padding:0.75rem 0.8rem;
+  margin-bottom:0.6rem;
+  border:1.5px solid var(--border);
+  border-radius:14px;
+  cursor:pointer;
+  font-weight:600;
+}
+
+.order-type-box label:last-child{
+  margin-bottom:0;
+}
+
+.order-type-box input{
+  accent-color:var(--primary);
+}
+
+/* Mobile navbar */
+@media(max-width:768px){
+
+  body{
+    padding-bottom:78px;
+  }
+
+  nav:not(.bottom-nav){
+    height:auto;
+    min-height:58px;
+    padding:0.8rem 1rem;
+    flex-wrap:wrap;
+    gap:0.8rem;
+  }
+
+  nav:not(.bottom-nav) .logo{
+    font-size:1.05rem;
+  }
+
+  nav:not(.bottom-nav) ul{
+    display:none;
+  }
+
+  nav .cart-btn{
+    font-size:0.78rem;
+    padding:0.42rem 0.75rem;
+  }
+
+  .container{
+    padding:1.2rem 0.9rem 5.5rem;
+  }
+
+  .page-header h1{
+    font-size:1.65rem;
+    line-height:1.2;
+  }
+
+  .page-header p{
+    font-size:0.9rem;
+  }
+
+}
+
+/* Mobile bottom nav */
+@media(max-width:768px){
+
+  .bottom-nav{
+    height:68px;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+
+  .bottom-nav a{
+    font-size:0.72rem;
+    line-height:1.1;
+  }
+
+}
+
+/* Menu mobile */
+@media(max-width:768px){
+
+  .cat-tabs{
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    padding-bottom:0.5rem;
+    scrollbar-width:none;
+  }
+
+  .cat-tabs::-webkit-scrollbar{
+    display:none;
+  }
+
+  .cat-tab{
+    flex:0 0 auto;
+    white-space:nowrap;
+  }
+
+  #menu-grid{
+    gap:1.2rem;
+  }
+
+  .group-items,
+  .menu-grid{
+    grid-template-columns:1fr !important;
+  }
+
+  .menu-card{
+    border-radius:18px;
+    padding:1rem;
+  }
+
+  .group-heading{
+    font-size:1.2rem;
+  }
+
+}
+
+/* Cart mobile */
+@media(max-width:768px){
+
+  .cart-sidebar{
+    width:100%;
+    top:auto;
+    height:82vh;
+    border-radius:24px 24px 0 0;
+  }
+
+  .cart-header{
+    border-radius:24px 24px 0 0;
+  }
+
+}
+
+/* Payment mobile */
+@media(max-width:768px){
+
+  .pay-page{
+    grid-template-columns:1fr !important;
+    min-height:auto;
+  }
+
+  .pay-left{
+    padding:2rem 1.2rem 3rem !important;
+  }
+
+  .rp-brand{
+    margin-bottom:2rem;
+  }
+
+  .rp-logo{
+    width:52px;
+    height:52px;
+    border-radius:16px;
+  }
+
+  .rp-title{
+    font-size:1.45rem;
+  }
+
+  .amount{
+    font-size:3rem;
+  }
+
+  .order-summary{
+    padding:1.2rem;
+    border-radius:22px;
+  }
+
+  .summary-item{
+    gap:1rem;
+  }
+
+  .pay-right{
+    min-height:auto !important;
+    padding:1rem !important;
+    margin-top:-2rem;
+  }
+
+  .payment-card{
+    padding:1.4rem;
+    border-radius:26px;
+  }
+
+  .payment-head h2{
+    font-size:1.45rem;
+  }
+
+  .payment-method{
+    border-radius:18px;
+    padding:0.9rem;
+  }
+
+  .pm-icon{
+    width:46px;
+    height:46px;
+    border-radius:14px;
+  }
+
+}
+
+/* Tables mobile */
+@media(max-width:768px){
+
+  div[style*="overflow-x:auto"]{
+    overflow-x:auto !important;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  .orders-table{
+    min-width:780px;
+  }
+
+  .orders-table th,
+  .orders-table td{
+    font-size:0.82rem !important;
+    padding:0.8rem !important;
+  }
+
+  .status-select{
+    min-width:110px;
+    padding:0.55rem 0.7rem;
+  }
+
+}
+
+/* Dashboard mobile */
+@media(max-width:768px){
+
+  .flex-between{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:1rem;
+  }
+
+  .stat-grid{
+    grid-template-columns:repeat(2,1fr);
+    gap:0.8rem;
+  }
+
+  .stat-card{
+    padding:1rem;
+    border-radius:14px;
+  }
+
+  .s-val{
+    font-size:1.3rem;
+  }
+
+  .s-label{
+    font-size:0.78rem;
+  }
+
+  #charts-row{
+    grid-template-columns:1fr !important;
+  }
+
+  .bar-row{
+    grid-template-columns:78px 1fr 42px;
+    gap:0.5rem;
+  }
+
+  .bar-label{
+    font-size:0.72rem;
+  }
+
+  .bar-val{
+    font-size:0.7rem;
+  }
+
+}
+
+/* Specials mobile */
+@media(max-width:768px){
+
+  .specials-grid{
+    grid-template-columns:1fr !important;
+  }
+
+  .special-card{
+    border-radius:22px;
+  }
+
+  .specials-manager > div{
+    flex-direction:column;
+    align-items:stretch !important;
+  }
+
+  .specials-manager select,
+  .specials-manager input,
+  .btn-add-special{
+    width:100%;
+  }
+
+}
+
+/* Reviews mobile */
+@media(max-width:768px){
+
+  .review-page{
+    margin:1rem auto 5rem;
+    padding:0;
+  }
+
+  .review-page h1{
+    font-size:2.1rem;
+  }
+
+  .review-form{
+    padding:1.2rem;
+    border-radius:22px;
+  }
+
+  #star-row .star{
+    font-size:2rem !important;
+  }
+
+  .review-top{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:0.4rem;
+  }
+
+}
+
+/* History mobile */
+@media(max-width:768px){
+
+  .h-top{
+    flex-direction:column;
+  }
+
+  .history-card{
+    border-radius:20px;
+    padding:1rem;
+  }
+
+  .h-total{
+    font-size:1.05rem;
+  }
+
+}
+
+/* Track mobile */
+@media(max-width:768px){
+
+  .order-track-card{
+    padding:1rem;
+    border-radius:20px;
+  }
+
+  .ot-header{
+    flex-direction:column;
+  }
+
+  .status-bar{
+    gap:0.2rem;
+  }
+
+  .status-line{
+    margin:0 -4px;
+  }
+
+  .dot{
+    width:32px;
+    height:32px;
+    font-size:0.85rem;
+  }
+
+  .label{
+    font-size:0.68rem;
+    text-align:center;
   }
 
 }
