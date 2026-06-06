@@ -58,7 +58,7 @@
     getOrders,
     getUsers,
     updateOrderStatus
-  } from "./firebase-admin.js";
+  } from "../js/firebase-admin.js";
 
   let currentFilter = 'all';
 
@@ -96,7 +96,7 @@
           <td>~${o.waitMins}m</td>
           <td style="font-size:0.8rem;">${fmtDate(o.placedAt)}</td>
           <td>
-            <select class="status-select" onchange="changeStatus('${o.id}', this.value)">
+            <select class="status-select" onchange="window.changeStatus('${o.id}', this.value)">
               <option ${o.status === 'Placed' ? 'selected' : ''}>Placed</option>
               <option ${o.status === 'Preparing' ? 'selected' : ''}>Preparing</option>
               <option ${o.status === 'Ready' ? 'selected' : ''}>Ready</option>
