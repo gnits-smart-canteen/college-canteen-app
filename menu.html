@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Explore – GNITS Canteen</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<nav>
+  <div class="logo">🍽️ GNITS <span>Canteen</span></div>
+  <ul>
+    <li><a href="menu.html" class="active">Explore</a></li>
+    <li><a href="specials.html">Today's Picks</a></li>
+    <li><a href="track.html">Track Order</a></li>
+    <li><a href="history.html">Your Orders</a></li>
+    <li><a href="reviews.html">Reviews</a></li>
+  </ul>
+  <div style="display:flex;align-items:center;gap:0.8rem;">
+    <span id="user-name" style="color:#fff;font-size:0.85rem;opacity:0.9;"></span>
+    <button class="cart-btn" id="cart-badge" onclick="openCart()">🛒 My Tray</button>
+    <button class="cart-btn" style="background:#fff3;color:#fff;" onclick="logout()">Logout</button>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <h1>Explore Menu</h1>
+    <p>Fresh food, made to order. Pick your favourites below.</p>
+  </div>
+
+  <div class="cat-tabs" id="cat-tabs"></div>
+  <div class="menu-grid" id="menu-grid"></div>
+</div>
+
+<!-- Bottom Nav (mobile) -->
+<nav class="bottom-nav">
+  <a href="menu.html" class="active"><span class="bn-icon">🍽️</span>Explore</a>
+  <a href="specials.html"><span class="bn-icon">⭐</span>Today's Picks</a>
+  <a href="track.html"><span class="bn-icon">📍</span>Track</a>
+  <a href="history.html"><span class="bn-icon">🧾</span>Your Orders</a>
+  <a href="reviews.html"><span class="bn-icon">💬</span>Reviews</a>
+</nav>
+
+<!-- My Tray Sidebar -->
+<div class="cart-overlay" id="cart-overlay" onclick="closeCart()"></div>
+<div class="cart-sidebar" id="cart-sidebar">
+  <div class="cart-header">
+    <h3>🛒 My Tray</h3>
+    <button onclick="closeCart()">✕</button>
+  </div>
+  <div class="cart-items" id="cart-items"></div>
+  <div class="cart-footer">
+    <div class="cart-total"><span>Total</span><span id="cart-total-val">₹0</span></div>
+    <button class="btn-checkout" onclick="goCheckout()">Proceed to Pay</button>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script type="module">
+
+import { auth } from "./js/firebase-config.js";
+
+import {
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+window.logout = async function () {
+
+  await signOut(auth);
+
+  window.location.href = "index.html";
+};
+
+onAuthStateChanged(auth, (user) => {
+
+  if (!user) {
+
+    window.location.href = "index.html";
+  }
+
+  else {
+
+    document.getElementById("user-name").textContent =
+      user.email.split("@")[0];
+  }
+
+});
+
+</script>
+
+<script src="js/menu.js"></script>
+<script type="module">
+import "./js/app.js";
+window.filterCat = filterCat;
+window.addItem = addItem;
+window.changeQty = changeQty;
+window.openCart = openCart;
+window.closeCart = closeCart;
+window.goCheckout = goCheckout;
+
+  document.getElementById('user-name').textContent =
+  "Student";
+
+  // ── Badge & dynamic label logic ───────────────────────────────────────────
+  // Best sellers: top 10 by order count from history
+  function getBestSellerIds() {
+    const orders = getOrders();
+    const count = {};
+    orders.forEach(o => o.items.forEach(i => { count[i.id] = (count[i.id] || 0) + i.qty; }));
+    return Object.entries(count).sort((a,b) => b[1]-a[1]).slice(0,10).map(e => parseInt(e[0]));
+  }
+
+  // Top rated: avg rating >= 4 from reviews
+  function getTopRatedIds() {
+    const reviews = getReviews();
+    const map = {};
+    reviews.forEach(r => {
+      if (!map[r.dishId]) map[r.dishId] = [];
+      map[r.dishId].push(r.rating);
+    });
+    return Object.entries(map)
+      .filter(([,ratings]) => ratings.reduce((a,b)=>a+b,0)/ratings.length >= 4)
+      .map(e => parseInt(e[0]));
+  }
+
+  // Trending: ordered in last 2 hours
+  function getTrendingIds() {
+    const cutoff = Date.now() - 2 * 60 * 60 * 1000;
+    const orders = getOrders().filter(o => o.placedAt >= cutoff);
+    const count = {};
+    orders.forEach(o => o.items.forEach(i => { count[i.id] = (count[i.id] || 0) + i.qty; }));
+    return Object.entries(count).sort((a,b)=>b[1]-a[1]).slice(0,5).map(e=>parseInt(e[0]));
+  }
+
+  // Order count per item
+  function getOrderCounts() {
+    const orders = getOrders();
+    const count = {};
+    orders.forEach(o => o.items.forEach(i => { count[i.id] = (count[i.id] || 0) + i.qty; }));
+    return count;
+  }
+
+  // Is canteen busy? (3+ active orders)
+  function isBusy() {
+    return getOrders().filter(o => o.status !== 'Ready').length >= 3;
+  }
+
+  function getBadgesHTML(item, bestSellers, topRated) {
+    const badges = [];
+    if (bestSellers.includes(item.id)) badges.push(`<span class="item-badge badge-bestseller">🔥 Best Seller</span>`);
+    if (topRated.includes(item.id))   badges.push(`<span class="item-badge badge-toprated">⭐ Top Rated</span>`);
+    if (item.wait <= 5)               badges.push(`<span class="item-badge badge-quick">⏱️ Quick</span>`);
+    if (item.price <= 30)             badges.push(`<span class="item-badge badge-budget">💸 Budget Pick</span>`);
+    return badges.length ? `<div class="item-badges">${badges.join('')}</div>` : '';
+  }
+
+  function getDynamicLabel(item, orderCounts, trending, busy) {
+    const cnt = orderCounts[item.id] || 0;
+    if (trending.includes(item.id)) return `<div class="dynamic-label trending">🔥 Trending right now</div>`;
+    if (busy) return `<div class="dynamic-label busy">⏳ Busy now: +${Math.ceil(item.wait * 0.5)} min extra wait</div>`;
+    if (cnt >= 5) return `<div class="dynamic-label popular">👥 ${cnt} people ordered this</div>`;
+    return '';
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  const categories = ['All', ...new Set(MENU.map(m => m.category))];
+  let activeCategory = 'All';
+
+  function renderTabs() {
+    document.getElementById('cat-tabs').innerHTML = categories.map(c =>
+      `<button class="cat-tab ${c === activeCategory ? 'active' : ''}" onclick="filterCat('${c}')">${c}</button>`
+    ).join('');
+  }
+
+  function filterCat(cat) { activeCategory = cat; renderTabs(); renderMenu(); }
+
+  function getCategoryItems(categoryObj) {
+
+  // Categories WITH groups
+  if (categoryObj.groups) {
+
+    return categoryObj.groups.flatMap(group =>
+      group.items.map(item => ({
+        ...item,
+        category: categoryObj.category,
+        group: group.name
+      }))
+    );
+
+  }
+
+  // Categories WITHOUT groups
+  return categoryObj.items.map(item => ({
+    ...item,
+    category: categoryObj.category
+  }));
+
+}
+
+async function renderMenu() {
+
+  const specials    = await getSpecials();
+  const specialIds = Array.isArray(specials)
+  ? specials.map(s => s.id)
+  : [];
+  const bestSellers = getBestSellerIds();
+  const topRated    = getTopRatedIds();
+  const trending    = getTrendingIds();
+  const orderCounts = getOrderCounts();
+  const busy        = isBusy();
+  const cart        = getCart();
+
+  const allItems = getAllMenuItems();
+
+  const items =
+    activeCategory === 'All'
+      ? allItems
+      : allItems.filter(
+          item => item.category === activeCategory
+        );
+
+  // GROUP ITEMS
+  const grouped = {};
+
+  items.forEach(item => {
+
+    const key = item.group || "Other";
+
+    if (!grouped[key]) {
+      grouped[key] = [];
+    }
+
+    grouped[key].push(item);
+
+  });
+
+  document.getElementById('menu-grid').innerHTML =
+
+    Object.entries(grouped).map(([groupName, groupItems]) => {
+
+      return `
+
+      <div class="menu-group">
+
+        ${groupName !== "Other"
+          ? `<h2 class="group-heading">
+               ${groupName}
+             </h2>`
+          : ''
+        }
+
+        <div class="group-items">
+
+          ${groupItems.map(item => {
+
+            const inCart =
+              cart.find(c => c.id === item.id);
+
+            const isSpecial =
+              specialIds.includes(item.id);
+
+            const special =
+              specials.find(s => s.id === item.id);
+
+            const displayPrice =
+              isSpecial
+                ? special.specialPrice
+                : item.price;
+
+            return `
+
+            <div class="menu-card">
+
+              ${isSpecial
+                ? `<div class="special-badge">
+                     ⭐ Today's Pick
+                   </div>`
+                : ''
+              }
+
+              ${getBadgesHTML(
+                item,
+                bestSellers,
+                topRated
+              )}
+
+              <div class="item-name">
+                ${item.item}
+              </div>
+
+              <div class="item-price">
+                ₹${displayPrice}
+              </div>
+
+              <div class="item-wait">
+                ⏱ ~${item.wait} mins
+              </div>
+
+              ${getDynamicLabel(
+                item,
+                orderCounts,
+                trending,
+                busy
+              )}
+
+              ${inCart
+
+                ? `<div class="qty-ctrl">
+
+                     <button onclick="changeQty(${item.id},-1)">
+                       −
+                     </button>
+
+                     <span>${inCart.qty}</span>
+
+                     <button onclick="changeQty(${item.id},1)">
+                       +
+                     </button>
+
+                   </div>`
+
+                : `<button
+                     class="add-btn"
+                     onclick="addItem(${item.id})"
+                   >
+                     + Add
+                   </button>`
+              }
+
+            </div>
+
+            `;
+
+          }).join('')}
+
+        </div>
+
+      </div>
+
+      `;
+
+    }).join('');
+
+}
+
+async function addItem(id) {
+
+  const item =
+    getAllMenuItems().find(m => m.id === id);
+
+  const specials = await getSpecials();
+
+  const special =
+  specials.find(s => s.id === id);
+
+  addToCart(
+    special
+      ? { ...item, price: special.specialPrice }
+      : item
+  );
+
+  renderMenu();
+
+}
+
+async function changeQty(id, delta) {
+  updateCartQty(id, delta);
+
+  await renderMenu();
+
+  renderCartSidebar();
+}
+
+  function renderCartSidebar() {
+    const cart = getCart();
+    const itemsEl = document.getElementById('cart-items');
+    itemsEl.innerHTML = cart.length === 0
+      ? '<div class="cart-empty">Your tray is empty 🍽️</div>'
+      : cart.map(c => `
+          <div class="cart-item">
+            <div>
+              <div class="ci-name">${c.item}</div>
+              <div class="ci-price">₹${c.price * c.qty}</div>
+            </div>
+            <div class="ci-qty">
+              <button onclick="changeQty(${c.id},-1)">−</button>
+              <span>${c.qty}</span>
+              <button onclick="changeQty(${c.id},1)">+</button>
+            </div>
+          </div>`).join('');
+    document.getElementById('cart-total-val').textContent = '₹' + cartTotal();
+    updateCartBadge();
+  }
+
+  function openCart()  { renderCartSidebar(); document.getElementById('cart-overlay').classList.add('open'); document.getElementById('cart-sidebar').classList.add('open'); }
+  function closeCart() { document.getElementById('cart-overlay').classList.remove('open'); document.getElementById('cart-sidebar').classList.remove('open'); }
+  function goCheckout() { if (getCart().length === 0) { toast('Tray is empty!'); return; } window.location.href = 'payment.html'; }
+
+  (async () => {
+
+  renderTabs();
+
+  await renderMenu();
+
+  updateCartBadge();
+
+})();
+  
+</script>
+</body>
+</html>

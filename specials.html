@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Daily Specials – GNITS Canteen</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<nav>
+  <div class="logo">🍽️ GNITS <span>Canteen</span></div>
+  <ul>
+    <li><a href="menu.html">Explore</a></li>
+    <li><a href="specials.html" class="active">Today's Picks</a></li>
+    <li><a href="track.html">Track Order</a></li>
+    <li><a href="history.html">Your Orders</a></li>
+    <li><a href="reviews.html">Reviews</a></li>
+  </ul>
+  <div style="display:flex;align-items:center;gap:0.8rem;">
+    <button class="cart-btn" id="cart-badge" onclick="window.location.href='menu.html'">🛒 My Tray</button>
+    <button class="cart-btn" style="background:#fff3;color:#fff;" onclick="logout()">Logout</button>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <h1>⭐ Today's Picks</h1>
+    <p id="today-date"></p>
+  </div>
+
+  <div id="specials-wrap"></div>
+</div>
+
+<!-- Bottom Nav -->
+<nav class="bottom-nav">
+  <a href="menu.html"><span class="bn-icon"></span>Explore</a>
+  <a href="specials.html" class="active"><span class="bn-icon">⭐</span>Today's Picks</a>
+  <a href="track.html"><span class="bn-icon"></span>Track</a>
+  <a href="history.html"><span class="bn-icon"></span>Your Orders</a>
+  <a href="reviews.html"><span class="bn-icon"></span>Reviews</a>
+</nav>
+
+<div id="toast" class="toast"></div>
+<script src="js/menu.js"></script>
+
+<script type="module">
+
+import "./js/app.js";
+
+window.requireAuth(() => {
+
+  document.getElementById(
+    "today-date"
+  ).textContent =
+
+    new Date().toLocaleDateString(
+      'en-IN',
+      {
+        weekday:'long',
+        year:'numeric',
+        month:'long',
+        day:'numeric'
+      }
+    );
+
+  render();
+
+});
+
+async function render() {
+
+  const specials =
+    await window.getSpecials();
+
+  const wrap =
+    document.getElementById(
+      'specials-wrap'
+    );
+
+  if (!specials.length) {
+
+    wrap.innerHTML = `
+
+      <div class="empty-state">
+
+        <div class="icon">
+          🍽️
+        </div>
+
+        <p>
+          No specials today.
+          Check back later!
+        </p>
+
+      </div>
+
+    `;
+
+    return;
+
+  }
+
+  wrap.innerHTML = `
+
+    <div class="specials-grid">
+
+      ${specials.map(s => {
+
+        const orig =
+          window.getAllMenuItems()
+          .find(m => m.id === s.id);
+
+        if (!orig)
+          return '';
+
+        return `
+
+        <div class="special-card">
+
+          <div class="s-name">
+            ${orig.item}
+          </div>
+
+          <div class="s-orig">
+            Original: ₹${orig.price}
+          </div>
+
+          <div class="s-price">
+            ₹${s.specialPrice}
+          </div>
+
+          <div class="s-wait">
+
+            ⏱ ~${orig.wait} mins
+
+            |
+
+            ${orig.category}
+
+          </div>
+
+          <button
+            class="add-btn"
+            onclick="addSpecial(${orig.id})"
+          >
+
+            Add to Cart
+
+          </button>
+
+        </div>
+
+        `;
+
+      }).join('')}
+
+    </div>
+
+  `;
+
+}
+
+window.addSpecial =
+async function(id) {
+
+  const specials =
+    await window.getSpecials();
+
+  const special =
+    specials.find(
+      s => s.id === id
+    );
+
+  const item =
+    window
+      .getAllMenuItems()
+      .find(
+        m => m.id === id
+      );
+
+  if (!item || !special)
+    return;
+
+  window.addToCart({
+
+    ...item,
+
+    price:
+      special.specialPrice
+
+  });
+
+  window.updateCartBadge();
+
+};
+
+window.updateCartBadge();
+
+</script>
+</body>
+</html>
