@@ -315,48 +315,40 @@ window.submitReview = async function () {
     });
 
   });
-
   const review = {
+  roll,
+  dishId,
+  dishName,
+  rating: selectedRating,
+  comment,
+  ts: Date.now()
+};
 
-    roll,
-    dishId,
-    dishName,
-    rating:
-      selectedRating,
-    comment,
-    ts:
-      Date.now()
-
-  };
-
-  const ref =
-    window.doc(
-      window.db,
-      "erp_users",
-      roll
-    );
-
-  const snap =
-    await window.getDoc(
-      ref
-    );
-
-  const data =
-    snap.data();
-
-  const reviews =
-    data.reviews || [];
-
-  reviews.unshift(
-    review
+const ref =
+  window.doc(
+    window.db,
+    "canteen",
+    "reviews"
   );
 
-  await window.updateDoc(
-    ref,
-    {
-      reviews
-    }
-  );
+const snap =
+  await window.getDoc(ref);
+
+const data =
+  snap.exists()
+    ? snap.data()
+    : {};
+
+const reviews =
+  data.reviews || [];
+
+reviews.unshift(review);
+
+await window.setDoc(
+  ref,
+  { reviews }
+);
+
 
   document
   .getElementById(
@@ -379,22 +371,23 @@ window.submitReview = async function () {
 ========================= */
 
 async function renderReviews() {
-
   const ref =
   window.doc(
-  window.db,
-  "erp_users",
-  roll
+    window.db,
+    "canteen",
+    "reviews"
   );
 
-const snap =
-await window.getDoc(
-ref
-);
+  const snap =
+  await window.getDoc(ref);
 
-const reviews =
-snap.data()
-.reviews || [];
+  const data =
+  snap.exists()
+    ? snap.data()
+    : {};
+
+  const reviews =
+  data.reviews || [];
 
   const list =
     document.getElementById(

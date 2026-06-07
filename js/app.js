@@ -5,6 +5,8 @@ import {
   getDoc,
   setDoc,
   updateDoc,
+  collection,
+  getDocs,
   arrayUnion
 }
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -260,3 +262,6 @@ window.doc = doc;
 window.getDoc = getDoc;
 window.updateDoc = updateDoc;
 window.updateDoc = updateDoc;
+window.setDoc = setDoc;
+window.collection = collection;
+window.getDocs = getDocs;
