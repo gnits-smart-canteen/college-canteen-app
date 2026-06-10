@@ -8,10 +8,7 @@
 </head>
 <body>
   <div class="pay-page">
-
-  <!-- LEFT SIDE -->
   <div class="pay-left">
-
     <div class="rp-brand">
       <div class="rp-logo">₹</div>
       <div>
@@ -19,12 +16,10 @@
         <div class="rp-sub">Secure payment gateway</div>
       </div>
     </div>
-
     <div class="amount-box">
       <div class="amount-label">Amount to pay</div>
       <div class="amount">₹<span id="pay-total">0</span></div>
     </div>
-
     <div class="order-summary">
       <div class="summary-head">
         <span>Order Summary</span>
@@ -32,14 +27,9 @@
       </div>
       <div id="summary-items"></div>
     </div>
-
   </div>
-
-  <!-- RIGHT SIDE -->
   <div class="pay-right">
-
     <div class="payment-card">
-
       <div class="payment-head">
         <h2>Choose payment method</h2>
         <p>All transactions are encrypted and secure.</p>
@@ -54,16 +44,13 @@
         </div>
         <input type="radio" checked>
       </div>
-
       <div class="upi-box">
         <input type="text" placeholder="Enter UPI ID" id="upi-id">
       </div>
-
       <div class="divider">OR</div>
-
-      <button class="quick-pay">
+      <button class="quick-pay" onclick="completeCashPayment()">
         <span></span>
-        Pay using Cash
+          Pay using Cash
       </button>
       <div class="secure-note">
         🔒 100% Secure Payments
@@ -82,152 +69,181 @@
       <button class="pay-btn" onclick="completePayment()">
         Pay ₹<span id="btn-total">0</span>
       </button>
-
     </div>
-
   </div>
-
 </div>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script src="js/menu.js"></script>
 <script type="module" src="js/app.js"></script>
 <script>
-
 window.addEventListener('DOMContentLoaded', () => {
-
   requireAuth((user) => {
-
     const cart = getCart();
-
     console.log(cart);
-
     if (cart.length === 0) {
       window.location.href = 'menu.html';
       return;
     }
-
-    // TOTAL
     const total = cart.reduce((sum, item) => {
       return sum + (item.price * item.qty);
     }, 0);
-
-    // ITEM COUNT
     const itemCount = cart.reduce((sum, item) => {
       return sum + item.qty;
     }, 0);
-
-    // UPDATE UI
     document.getElementById('pay-total').textContent = total;
-
     document.getElementById('btn-total').textContent = total;
-
     document.getElementById('item-count').textContent =
       itemCount + ' items';
-
-    // RENDER SUMMARY
     document.getElementById('summary-items').innerHTML =
       cart.map(item => `
-
         <div class="summary-item">
-
           <div>
             <div class="si-name">${item.item}</div>
             <div class="si-qty">
               Qty ${item.qty}
             </div>
           </div>
-
           <div class="si-price">
             ₹${item.price * item.qty}
           </div>
-
         </div>
-
       `).join('');
-
-    // PAYMENT BUTTON
     window.completePayment = async function () {
-
-  try {
-
-    const roll = getCurrentUser();
-    const cart = getCart();
-    const total = cartTotal();
-    const orderType =
-    document.querySelector(
-    'input[name="orderType"]:checked'
-  ).value;
-    if (!cart.length) {
-      alert("Cart empty");
-      return;
-    }
-
-    // create order locally
-    const order =
-      placeOrder(
-        cart,
-        total,
-        roll,
-        orderType
-      );
-
-    console.log("ORDER", order);
-
-    // firebase save
-    const ref =
-      window.doc(
-        window.db,
-        "erp_users",
-        roll.toUpperCase()
-      );
-
-    const snap =
-      await window.getDoc(ref);
-
-    const data =
-      snap.data();
-
-    const orders =
-      data.orders || [];
-
-    orders.unshift(order);
-
-    await window.updateDoc(
-      ref,
-      {
-        orders
+      try {
+        const roll = getCurrentUser();
+        const cart = getCart();
+        const total = cartTotal();
+        const orderType =
+        document.querySelector(
+        'input[name="orderType"]:checked'
+        ).value;
+        if (!cart.length) {
+          alert("Cart empty");
+          return;
+        }
+        const options = {
+          key: "rzp_test_SztQOjLl5ClxUl",
+          amount: total * 100,
+          currency: "INR",
+          name: "GNITS Canteen",
+          description: `${orderType} Order`,
+          methods: {
+            upi: true,
+            card: true,
+            netbanking: true,
+            wallet: true
+          },
+          handler: async function (response) {
+            const order =
+            placeOrder(
+              cart,
+              total,
+              roll,
+              orderType
+            );
+            order.payment = "Razorpay";
+            order.paymentStatus = "Success";
+            order.razorpayPaymentId =
+            response.razorpay_payment_id;
+            const ref =
+            window.doc(
+              window.db,
+              "erp_users",
+              roll.toUpperCase()
+            );
+            const snap =
+            await window.getDoc(ref);
+            const data =
+            snap.data();
+            const orders =
+            data.orders || [];
+            orders.unshift(order);
+            await window.updateDoc(
+              ref,
+              { orders }
+            );
+            localStorage.setItem(
+              "sc_last_order",
+              order.id
+            );
+            window.location.href =
+            "receipt.html";
+          },
+          prefill: {
+            name: roll,
+            email: `${roll}@gnitscanteen.com`
+          },
+          theme: {
+            color: "#6D8C8E"
+          }
+        };
+        const rzp =
+        new Razorpay(options);
+        rzp.open();
       }
-    );
-
-    console.log("Saved to Firebase");
-
-    localStorage.setItem(
-      "sc_last_order",
-      order.id
-    );
-
-    window.location.href =
-      "receipt.html";
-
-  }
-
-  catch (e) {
-
-    console.error(
-      "PAY ERROR:",
-      e
-    );
-
-    alert(
-      e.message
-    );
-
-  }
-
-};
+      catch (e) {
+        console.error("PAY ERROR:", e);
+        alert(e.message);
+      }
+    };
+    window.completeCashPayment = async function () {
+      const confirmCash =
+      confirm(
+        "Confirm cash payment?\n\nYour order will be placed and payment will be collected at the canteen counter."
+      );
+      if (!confirmCash) return;
+      try {
+        const roll = getCurrentUser();
+        const cart = getCart();
+        const total = cartTotal();
+        const orderType =
+        document.querySelector(
+          'input[name="orderType"]:checked'
+        ).value;
+        if (!cart.length) {
+          alert("Cart empty");
+          return;
+        }
+        const order =
+        placeOrder(
+          cart,
+          total,
+          roll,
+          orderType
+        );
+        order.payment = "Cash";
+        order.paymentStatus = "Pending";
+        const ref =
+        window.doc(
+          window.db,
+          "erp_users",
+          roll.toUpperCase()
+        );
+        const snap =
+        await window.getDoc(ref);
+        const data =
+        snap.data();
+        const orders =
+        data.orders || [];
+        orders.unshift(order);
+        await window.updateDoc(
+          ref,
+          { orders }
+        );
+        localStorage.setItem(
+          "sc_last_order",
+          order.id
+        );
+        window.location.href =
+        "receipt.html";
+      }
+      catch (e) {
+        console.error("CASH PAY ERROR:", e);
+        alert(e.message);
+      }
+    };
   });
-
 });
-
 </script>
 </body>
 </html>
